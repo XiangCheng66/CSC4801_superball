@@ -3,6 +3,7 @@
 ## Project Overview
 
 ## Team Members
+Xu Hanjie
 
 ## Architecture Summary
 
