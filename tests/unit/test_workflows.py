@@ -1,25 +1,25 @@
-# Structure example only: replace each pass with your own unit-test assertions.
+import pytest
 
 
 def test_fp_can_1_profile_and_private_resume_rules():
-    pass
+    pytest.skip("A day 2: profile and resume implementation pending")
 
 
 def test_fp_can_2_recommendations_preserve_fields_and_rank_all_jobs():
-    pass
+    pytest.skip("A/C: recommendations implementation pending")
 
 
 def test_fp_can_3_pending_duplicate_and_application_owner():
-    pass
+    pytest.skip("A/B: application implementation pending")
 
 
 def test_fp_emp_1_company_profile():
-    pass
+    pytest.skip("B: company profile implementation pending")
 
 
 def test_fp_emp_2_job_validation_and_deletion():
-    pass
+    pytest.skip("B: job management implementation pending")
 
 
 def test_fp_emp_3_applicant_fields_order_status_and_role():
-    pass
+    pytest.skip("B/C: applicant management implementation pending")

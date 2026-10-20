@@ -1,21 +1,21 @@
-# Structure example only: replace each pass with your own unit-test assertions.
+import pytest
 
 
 def test_fp_sched_1_slot_creation_timezones_and_deletion():
-    pass
+    pytest.skip("C: availability implementation pending")
 
 
 def test_fp_sched_1_invalid_slots():
-    pass
+    pytest.skip("C: availability validation implementation pending")
 
 
 def test_fp_sched_2_eligible_booking():
-    pass
+    pytest.skip("C: booking implementation pending")
 
 
 def test_fp_sched_2_ineligible_booking():
-    pass
+    pytest.skip("C: booking eligibility implementation pending")
 
 
 def test_fp_sched_3_conflict_contract():
-    pass
+    pytest.skip("C: booking conflict implementation pending")

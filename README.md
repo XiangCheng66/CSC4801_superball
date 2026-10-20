@@ -13,15 +13,15 @@
 求职者预约 → 求职者与雇主均能查看预约
 ```
 
-**当前阶段：课程模板与开发规划。本文中的技术栈、模块、接口和里程碑是开发计划，不代表已实现功能。** 当前单元测试仍为 `pass` 占位，不能作为需求完成证据。课程正式要求优先于团队规划；修改实现时同步维护本文、`SPEC.md` 和 `INSTALL.md`。
+**当前阶段：A 的第一天基础已实现。** 已有 React 账号页面、Django/DRF 认证 API、PostgreSQL 配置与迁移、会话登录、角色/所有权检查基础、公共请求契约及真实认证测试。公司、岗位、申请、匹配和预约仍是后续计划；对应模板测试明确标为 skipped。课程正式要求优先于团队规划；修改实现时同步维护本文、`SPEC.md` 和 `INSTALL.md`。
 
 ## Team Members
 
 - JeRant
 - Isochiot
-- 第三位成员：待补充
+- XiangCheng66（A：项目与认证基础、求职者模块）
 
-A/B/C 表示待认领的职责，不预先对应上述成员。开工时填写实际负责人。
+A 已由 XiangCheng66 认领；B/C 的实际负责人由团队补充，不预先替其他成员分配身份。
 
 ## Architecture Summary
 
@@ -30,18 +30,18 @@ A/B/C 表示待认领的职责，不预先对应上述成员。开工时填写�
 | 部分 | 开发基线 | 职责 |
 |---|---|---|
 | 前端 | React（已确定） | 页面、表单、交互与 API 调用 |
-| 后端 | Python（已确定），框架计划使用 Django + Django REST Framework | 认证、权限、业务规则、数据校验与 JSON API |
-| 数据库 | PostgreSQL（计划） | 持久化数据、外键、唯一约束与预约事务 |
-| 验证 | Python 单元测试；测试运行器在搭建骨架时统一 | 验证实际业务逻辑、错误与冲突场景 |
-| 交付 | Docker | 可从仓库源码重建完整环境 |
+| 后端 | Python + Django 5.2 + Django REST Framework | 已建立认证、权限基础和 JSON API；其余业务后续扩展 |
+| 数据库 | PostgreSQL 17 | 已建立账号迁移与演示数据；预约约束后续补充 |
+| 验证 | pytest + pytest-django；Vitest；可选 Playwright | 默认隔离内存测试库，也支持独立 PostgreSQL 测试库 |
+| 交付 | 多阶段 Dockerfile + Compose | 已配置 React 构建、Python 服务与 PostgreSQL；本机 Docker 验证待补 |
 
 React 调用 Python API；后端校验角色、所有权和业务规则后访问数据库，并返回 JSON。匹配分数和预约资格由后端统一计算和校验。
 
-参考：[Django](https://www.djangoproject.com/start/)、[Django REST Framework](https://www.django-rest-framework.org/)、[PostgreSQL 数据约束](https://www.postgresql.org/docs/current/ddl-constraints.html)。框架版本与全部依赖在项目骨架建立时统一并锁定。
+参考：[Django](https://www.djangoproject.com/start/)、[Django REST Framework](https://www.django-rest-framework.org/)、[PostgreSQL 数据约束](https://www.postgresql.org/docs/current/ddl-constraints.html)。Python 版本锁在 `requirements.lock`，前端版本锁在 `frontend/package-lock.json`。
 
 ### 规划目录
 
-下列目录为目标结构；当前仓库仍保留课程模板文件。
+下列目录为整体目标结构；当前已建立 accounts/common/config 和 React 账号入口，其余业务目录由对应成员后续添加。
 
 ```text
 CSC4801_superball/
@@ -55,6 +55,8 @@ CSC4801_superball/
 │       └── scheduling/         # C
 ├── backend/
 │   ├── accounts/               # A
+│   ├── common/                 # 已建立：公共认证、权限、响应与健康检查
+│   ├── config/                 # 已建立：Django 配置与路由
 │   ├── candidates/             # A
 │   ├── jobs/                   # B
 │   ├── applications/           # B
@@ -95,12 +97,12 @@ CSC4801_superball/
 
 ### 开工前共同确认
 
-1. 认证方式、凭证传递和退出失效机制；保护操作遵守未登录 `401` 或跳转登录、角色/所有权错误 `403`、允许访问但对象不存在 `404` 的约定。
+1. 已落地 Django 会话 Cookie + CSRF；所有模块使用 [公共 API 契约](docs/API_CONTRACT.md) 和 `frontend/src/api/client.js`。保护操作遵守未登录 `401`、角色/所有权错误 `403`、允许访问但对象不存在 `404` 的约定。
 2. 数据模型：`User`、`CandidateProfile`、`CompanyProfile`、`Job`、`Application`、`InterviewSlot`、`Booking`，以及技能存储和时区策略。
 3. 唯一约束：账号标识、`Application(candidate_id, job_id)`、`Booking.slot_id`、`Booking.application_id`。
 4. API 请求字段、响应字段、错误码及公共服务函数。数据库模型和迁移变更提前通知队友。
 
-以下是接口范围草稿，正式路径与字段确认后写入 `SPEC.md`：
+认证接口及字段已记录在 `SPEC.md` 和公共 API 契约；以下业务范围仍是后续接口草稿：
 
 | 负责人 | API 范围草稿 |
 |---|---|
@@ -158,38 +160,55 @@ git clone https://github.com/XiangCheng66/CSC4801_superball.git
 cd CSC4801_superball
 ```
 
-完整启动流程将在 [INSTALL.md](INSTALL.md) 中维护，包括依赖版本、前后端启动、数据库迁移、重置/seed、测试、Docker 构建与依赖启动命令。该文件当前仍为模板，项目尚无可用的完整应用启动流程。
+完整命令见 [INSTALL.md](INSTALL.md)。有 Docker 的本地环境可复制并修改配置，然后构建启动：
 
-第一天需统一并锁定 Python、Node.js、前后端依赖及数据库版本；确认认证和 API 契约，并完成 React → API → 数据库的实际联通。
+```bash
+cp .env.example .env
+# 修改 .env 中的秘密和数据库密码占位值；PowerShell 复制使用 Copy-Item。
+docker compose pull db
+docker compose build app
+docker compose up -d
+```
+
+访问 `http://127.0.0.1:8000`。本机无 Docker 时，按 INSTALL.md 建立 PostgreSQL、运行迁移和认证 seed，分别启动 Python 后端（8000）与 React 前端（5173）。已完成 React → API → PostgreSQL 的账号信息读取；Docker 构建需要在有 Docker 的环境补充验证。
 
 ## Demo Accounts
 
-演示账号尚未生成。seed 完成后在此记录明确标为 local/demo 的账号及密码；不要填写真实账号或个人数据。
+执行 `python manage.py seed_auth_demo` 后可使用以下公开的 **local/demo** 账号：
 
-一个文档化命令应能重置并生成：至少两个求职者、两个雇主、两个有技能要求的岗位，100/50/0/空岗位技能得分 100 的四种例子，四种申请状态，以及两个可争抢同一可用时段的 `Interviewing` 求职者。
+| 用户名 | 身份 | 密码 |
+|---|---|---|
+| `candidate1`、`candidate2` | Candidate | `LocalDemo!2026` |
+| `employer1`、`employer2` | Employer | `LocalDemo!2026` |
+
+邮箱为 `<username>@example.test`。该幂等命令只更新四个认证演示账号，不删除其他用户，也不重置 B/C 的业务数据。
+
+最终完整重置/seed 命令仍需生成：至少两个求职者、两个雇主、两个有技能要求的岗位，100/50/0/空岗位技能得分 100 的四种例子，四种申请状态，以及两个可争抢同一可用时段的 `Interviewing` 求职者。目前仅认证账号部分完成。
 
 ## Running Unit Tests
 
-课程模板现有测试目录的调用方式为：
+安装锁定依赖后，在仓库根目录使用虚拟环境的 Python 执行：
 
 ```bash
 python -m pytest tests/unit -v
 ```
 
-当前测试函数均为 `pass` 占位，即使显示通过也不证明业务正确。先实现实际业务与测试断言，再以测试结果作为证据。技术栈落地时统一完整测试命令并同步更新此处、CI 和 `INSTALL.md`；失败必须返回非零退出码。
+`test_auth.py` 已改为真实业务测试，覆盖认证、密码哈希、角色/所有权、CSRF、唯一约束、SQL 绑定和错误合同。未实现的业务模板测试为 skipped，不算已完成。默认使用隔离 SQLite 内存库；PostgreSQL 隔离测试方式见 INSTALL.md。失败返回非零退出码。
+
+前端在 `frontend` 目录执行 `npm test` 和 `npm run build`。可选真实浏览器测试为 `npm run test:e2e`，需先启动本地 PostgreSQL 演示环境和服务。CI 由 C 后续接入。
 
 覆盖成功、输入校验、权限和冲突情形，特别检查 `401/403/404`、技能归一化与两端同分排序、越权、SQL 绑定值、XSS 转义及预约冲突。课程只要求单元测试；数据库原子性仍需通过实现和运行环境验证。
 
 ## Requirement–Test Mapping
 
-**以下是实施与验证计划，所有列出的现有测试仍为占位。** `backend/` 路径是规划中的实现位置；完成后补充实际文件和真实具名测试，不将占位或计划视为已通过。
+**下表同时保留已实现基础与后续规划。** `tests/unit/test_auth.py` 为真实测试，其他模板业务测试当前 skipped。公共权限、SQL 和 XSS 基础的通过不能代替未来简历、岗位、申请和预约的授权/安全验证。
 
 | Requirement ID | 负责人 / 行为 | 实现文件或位置（规划） | Unit test(s) / verification evidence（待完成） |
 |---|---|---|---|
-| FP-ARCH-1 | 全员：浏览器、后端、关系型数据库 | `frontend/`、`backend/`、`Dockerfile` | 干净 checkout 的完整构建、启动与浏览器演示 |
-| FP-AUTH-1 | A：注册、登录、退出、唯一标识 | `backend/accounts/` | `tests/unit/test_auth.py::test_fp_auth_1_registration_and_session_lifecycle`；`test_fp_auth_1_invalid_registration`（同文件） |
-| FP-AUTH-2 | A：密码哈希、秘密不外泄 | `backend/accounts/` | `tests/unit/test_auth.py::test_fp_auth_2_salted_hash_and_password_verification`；补充秘密不外泄断言 |
-| FP-AUTH-3 | A 牵头，全员：角色、所有权、缺失对象 | 各模块权限逻辑 | `tests/unit/test_auth.py::test_fp_auth_3_authorization_and_missing_object` |
+| FP-ARCH-1 | 全员：已完成账号级全栈 | `frontend/`、`backend/`、`Dockerfile`、`compose.yaml` | 本机 PostgreSQL 浏览器认证流程已验证；完整业务及 Docker 构建待补 |
+| FP-AUTH-1 | A：已实现注册、登录、退出、唯一标识 | `backend/accounts/models.py`、`serializers.py`、`views.py` | `tests/unit/test_auth.py::test_fp_auth_1_registration_and_session_lifecycle`；`test_fp_auth_1_invalid_registration`；`test_duplicate_account_is_rejected_case_insensitively`（同文件） |
+| FP-AUTH-2 | A：已实现密码哈希、公开字段白名单 | `backend/accounts/models.py`、`serializers.py` | `tests/unit/test_auth.py::test_fp_auth_2_salted_hash_and_password_verification` |
+| FP-AUTH-3 | A 已实现基础，其他模块后续复用 | `backend/common/authentication.py`、`permissions.py`、`backend/accounts/views.py` | `tests/unit/test_auth.py::test_fp_auth_3_authorization_and_missing_object`；`test_role_permissions_are_enforced_by_server`（同文件） |
 | FP-CAN-1 | A：资料、技能、私有简历 | `backend/candidates/` | `tests/unit/test_workflows.py::test_fp_can_1_profile_and_private_resume_rules` |
 | FP-CAN-2 | A/C：全部岗位、分数和排序 | `backend/candidates/`、`backend/matching/` | `tests/unit/test_workflows.py::test_fp_can_2_recommendations_preserve_fields_and_rank_all_jobs` |
 | FP-CAN-3 | A/B：申请、防重复、本人查询 | `backend/applications/` | `tests/unit/test_workflows.py::test_fp_can_3_pending_duplicate_and_application_owner` |
@@ -202,13 +221,13 @@ python -m pytest tests/unit -v
 | FP-SCHED-2 | C：预约资格、可见性、状态变更后保留 | `backend/scheduling/` | `tests/unit/test_scheduling.py::test_fp_sched_2_eligible_booking`；`test_fp_sched_2_ineligible_booking`（同文件）；补充已有预约保留断言 |
 | FP-SCHED-3 | C：数据库原子性与冲突合同 | `backend/scheduling/`、约束/迁移 | `tests/unit/test_scheduling.py::test_fp_sched_3_conflict_contract`；另检查真实数据库原子性 |
 | FP-SEC-1 | 全员：对象访问与越权边界 | 各模块权限逻辑 | 扩展认证、求职者、雇主和预约测试，验证代表性越权场景 |
-| FP-SEC-2 | 全员：参数化查询/安全 ORM | 各模块数据库访问 | 待编写 SQL 元字符保持绑定值的具名测试 |
-| FP-SEC-3 | 全员：用户内容安全渲染 | React 渲染与后端输出 | 待编写 `<script>alert(1)</script>` 不成为可执行标记的具名测试 |
+| FP-SEC-2 | 认证部分已验证，其他模块待补 | `backend/accounts/models.py` 及未来数据库访问 | `tests/unit/test_auth.py::test_sql_metacharacters_remain_bound_values` |
+| FP-SEC-3 | 账号显示已验证，其他内容待补 | `frontend/src/components/AccountHome.jsx` 及未来页面 | `frontend/src/App.test.jsx` 中 `submits the selected registration role and escapes user-controlled display names` |
 | FP-SEC-4 | 全员：秘密、个人数据、测试隔离 | 配置、`.env.example`、测试 fixtures | 仓库检查、隔离测试库和第三方服务替身证据 |
 | FP-PROC-1 | 全员：规格与实际代码一致 | `SPEC.md` | 逐模块审查规格，确认成员能够解释与修改代码 |
 | FP-DOC-1 | A 牵头：安装可复现 | `INSTALL.md`、`Dockerfile` | 由未搭建环境的成员按文档完成干净安装 |
 | FP-DOC-2 | B 牵头：完整 README 与映射 | `README.md` | 逐项核对概览、架构、账号、测试、文档和全部需求映射 |
-| FP-DOC-3 | B 牵头：确定性重置和 seed | seed 命令与 fixtures（待建立） | 验证人数、岗位、四种匹配/状态及同槽竞争演示数据 |
+| FP-DOC-3 | B 牵头：完整重置和 seed 待补；认证 seed 已有 | `backend/accounts/management/commands/seed_auth_demo.py`；业务 seed 待建立 | `tests/unit/test_auth.py::test_demo_seed_is_idempotent_and_has_only_demo_accounts`；完整业务数据仍待补 |
 | FP-TEST-1 | 全员：实际业务单元测试与完整命令 | `tests/unit/`、CI 配置（待建立） | 替换全部占位，覆盖每项功能及规定安全/冲突案例 |
 | FP-SUB-1 | 全员：确切 main commit 与完整 Docker 环境 | Git、`Dockerfile`、`INSTALL.md` | 在提交 commit 验证构建、依赖启动、迁移、seed、测试与 UI |
 
@@ -216,16 +235,17 @@ python -m pytest tests/unit -v
 
 | 文档 | 用途 | 当前状态 |
 |---|---|---|
-| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | 开发规划，随实现更新 |
-| [SPEC.md](SPEC.md) | 架构、模型、权限、API、匹配、预约事务与安全设计 | 课程模板，待补全 |
-| [INSTALL.md](INSTALL.md) | 精确安装、启动、迁移、seed、测试和 Docker 指令 | 课程模板，待补全 |
-| [Dockerfile](Dockerfile) | 完整运行环境的构建入口 | 课程模板，待配置真实应用 |
+| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | A/Day 1 状态与后续规划 |
+| [SPEC.md](SPEC.md) | 架构、模型、权限、API、匹配、预约事务与安全设计 | 认证基础已记录；业务设计待补 |
+| [INSTALL.md](INSTALL.md) | 精确安装、启动、迁移、seed、测试和 Docker 指令 | 已提供基础运行方式 |
+| [公共 API 契约](docs/API_CONTRACT.md) | 会话、CSRF、JSON、错误码和模块接入示例 | 已落地 |
+| [A 第一天交接](docs/DAY1_HANDOFF.md) | 完成范围、验证证据、B/C 接入与后续工作 | 已提供 |
+| [Dockerfile](Dockerfile) / [compose.yaml](compose.yaml) | React/Python 构建和 PostgreSQL 环境 | 已配置，待 Docker 环境验证 |
 | [课程项目页](https://sra-research.github.io/CSC4801/project.html) | 课程项目与审计安排 | 结合教师公布的最新要求核对 |
 
 ## Known Limitations
 
-- 当前尚无 React/Python 业务应用，规划目录与 API 尚未建立。
-- 现有 `requirements.lock` 是带 Flask 的课程示例依赖，尚未改为计划中的 Django/DRF 技术栈。
-- `Dockerfile` 的启动命令会报告模板未配置；尚不能启动完整平台。
-- `SPEC.md`、`INSTALL.md`、演示账号和 seed 流程尚未完成；单元测试仍是占位。
-- 三名成员的 A/B/C 职责对应、具体版本、认证方式、完整 API 与数据库设计待共同确认。
+- 已完成账号基础；个人技能/简历、公司、岗位、申请、匹配、面试仍待后续实现，其业务测试明确 skipped。
+- Dockerfile 和 Compose 已配置，但本次机器没有 Docker，需补充容器构建证据。
+- 当前 seed 只包含认证账号；最终项目的完整重置命令、岗位、申请和竞争时段数据待补。
+- CI 尚未建立；B/C 职责认领和后续业务模型/API 需继续确认。公共认证、请求与权限契约已经确定。
