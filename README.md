@@ -3,7 +3,8 @@
 ## Project Overview
 
 ## Team Members
-Xu Hanjie
+- Xu Hanjie
+- Isochiot
 
 ## Architecture Summary
 
