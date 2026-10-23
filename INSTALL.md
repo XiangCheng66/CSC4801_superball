@@ -1,6 +1,6 @@
-# Installation Guide — A / Day 1
+# Installation Guide — A + C / Day 1
 
-当前可运行 React 账号页面、Python 认证 API 和 PostgreSQL 数据库。公司、岗位、申请、匹配与预约仍待实现。本指南的 seed 只生成认证演示账号，不是最终项目的完整业务数据集。
+当前可运行 React 账号页面、Python 认证 API 和 PostgreSQL 数据库；共享匹配与排序可由后端调用并单独测试。公司、岗位、申请、推荐页面接入与预约仍待实现。本指南的 seed 只生成认证演示账号，不是最终项目的完整业务数据集。
 
 ## Prerequisites and Versions
 
@@ -61,7 +61,7 @@ docker compose down
 
 `postgres_data` 卷在普通 `down` 后保留。仅需完全重置本地 Compose 演示库时执行 `docker compose down --volumes`，然后重新 `docker compose up -d`；该操作会清空此 Compose 项目的数据库卷。
 
-本次开发机器没有 Docker，容器构建尚未在该机器实测；本机 PostgreSQL、前后端及其测试可按下列方式验证。首次容器构建也应由团队成员核实。
+完整应用镜像构建仍待验证；仅启动 PostgreSQL 测试容器不能代替应用 Dockerfile/Compose 的完整构建与启动验证。
 
 ## Local Development
 
@@ -150,7 +150,23 @@ npm test
 npm run build
 ```
 
-未实现的候选人业务、雇主业务、匹配和预约测试明确标记为 skipped，不是已完成需求。测试失败会返回非零退出码。
+单独运行 C 的匹配测试（macOS/Linux，仓库根目录）：
+
+```bash
+.venv/bin/python -m pytest tests/unit/test_matching.py -v
+```
+
+未实现的候选人业务、雇主业务和预约测试明确标记为 skipped，不是已完成需求。测试失败会返回非零退出码。
+
+## Continuous Integration
+
+`.github/workflows/ci.yml` 在 push、PR 和手动触发时运行：
+
+- Python 3.12、锁定依赖、Django 配置与迁移检查，以及 `python -m pytest tests/unit -v -ra`。
+- 临时 PostgreSQL 17 service，使用公开的 CI-only 凭证；测试库为独立 `test_superball_ci`，不使用本地 `.env` 或演示数据。
+- Node 22，`npm ci`、`npm test`、`npm run build`。
+
+工作流配置不要求 GitHub Secrets。业务未实现的 skip 在日志中保留明确原因，不作为需求通过证据。当前配置尚未推送，因此尚无远程 Actions 运行记录。后端测试库隔离与服务容器配置分别参考 [Django 测试文档](https://docs.djangoproject.com/en/5.2/topics/testing/overview/) 和 [GitHub PostgreSQL service 文档](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers)。
 
 ## Optional Browser Smoke Test
 
