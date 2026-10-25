@@ -6,3 +6,14 @@ __pycache__/
 data/
 .env
 *.sqlite3
+node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+.tools/
+.runtime/
+.coverage
+htmlcov/
+*.log
+staticfiles/
+frontend_dist/
