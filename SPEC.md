@@ -1,8 +1,8 @@
-# Project Specification — A + C / Day 1
+# Project Specification — A + B + C / Day 1
 
 ## Product Scope
 
-已实现项目骨架、两种角色的注册/登录/退出、当前账号查询、角色/所有权校验基础、公共请求/错误契约、数据库健康检查和认证演示账号。C 已提供共享匹配分数与两端排序服务、真实单元测试和 CI 配置。候选人技能与私有简历、公司、岗位、申请、推荐页面接入与面试业务尚未实现。
+已实现项目骨架、两种角色的注册/登录/退出、当前账号查询、角色/所有权校验基础、公共请求/错误契约、数据库健康检查和认证演示账号。B 已提供公司、岗位、岗位技能与申请模型、数据库约束和迁移；C 已提供共享匹配分数与两端排序服务、真实单元测试和 CI 配置。候选人技能与私有简历、雇主域 HTTP 接口与页面、推荐页面接入与面试业务尚未实现。
 
 ## Architecture
 
@@ -65,7 +65,7 @@ React 使用文本插值显示用户输入，不使用 `dangerouslySetInnerHTML`
 
 技能输入为字符串列表，归一化为去首尾空格、转小写、去空值和去重的集合 C/R。R 为空时得分 100，否则用整数运算 `100 * len(C & R) // len(R)` 向下取整；简历不是评分参数。非法技能类型抛出 TypeError，HTTP 层须先用 serializer 验证。
 
-技能数据库字段尚未建立；A/B 后续选择经校验的 JSON 字符串数组或关系表，并转换为该契约。当前计算只接收内存列表，没有技能持久化。实际存储落地后必须更新本段。
+岗位技能已由 B 的 `RequiredSkill` 子表持久化，保存时去首尾空白，同一岗位内名称不区分大小写唯一。`Job.required_skill_names` 将子表转换为字符串列表，调用方可映射为 `rank_jobs` 的 `required_skills` 字段；批量查询应预取 `required_skills`。求职者技能存储由 A 后续建立，并转换为同一计算契约。匹配服务只接收内存集合，不直接读取数据库。
 
 两端评分调用同一函数。职位排序按分数降序、标题 casefold、整数职位 ID；申请人排序按分数降序、显示名 casefold、整数求职者 User ID（不是申请 ID）。返回新列表和浅拷贝行，保留其他字段并覆盖旧分数，不修改输入。A 负责提供全部当前职位；B 负责提供已授权职位的申请人；调用方负责筛选公开输出字段，严禁泄露简历。
 
@@ -89,7 +89,7 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 ## Design Decisions and Limitations
 
-当前完成 A 的第一天基础任务与 C 的第一天匹配服务。认证/公共权限不能证明未来岗位、简历或预约的授权已经实现；各模块仍须补充对象边界和具名测试。
+当前完成 A 的第一天基础、B 的雇主域模型与 C 的共享匹配服务。认证/公共权限及模型约束不能证明未来岗位、简历或预约的 HTTP 授权已经实现；各模块仍须补充对象边界和具名测试。
 
 数据库时刻采用 UTC（`USE_TZ=True`），预约展示时区由 C 在实现时明确。Docker/Compose 文件已建立，完整应用镜像构建证据仍待补充；完整业务 seed 由 B/C 后续完成。
 
@@ -97,4 +97,4 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 `.github/workflows/ci.yml` 在 push、pull_request 和手动触发时执行两个检查：Python 3.12 + PostgreSQL 17 的完整后端单元测试（同时做依赖一致性、Django 配置和迁移遗漏检查）；Node 22 的前端单元测试和生产构建。依赖从已有锁文件安装。
 
-后端 CI 只连接本次运行的 PostgreSQL service；pytest-django 创建独立 `test_superball_ci`，不连接演示库或外部服务。日志用 `-ra` 明确列出未实现业务的 skip；CI 通过不是全部课程需求完成。配置尚须在分支推送后由 GitHub Actions 实际执行，不能将本地命令验证等同于远程 CI 通过。
+后端 CI 只连接本次运行的 PostgreSQL service；pytest-django 创建独立 `test_superball_ci`，不连接演示库或外部服务。日志用 `-ra` 明确列出未实现业务的 skip；CI 通过不是全部课程需求完成。每次推送的实际结果见 [GitHub Actions](https://github.com/XiangCheng66/CSC4801_superball/actions)，不能将本地命令验证等同于远程 CI 通过。

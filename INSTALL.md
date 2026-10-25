@@ -166,7 +166,7 @@ npm run build
 - 临时 PostgreSQL 17 service，使用公开的 CI-only 凭证；测试库为独立 `test_superball_ci`，不使用本地 `.env` 或演示数据。
 - Node 22，`npm ci`、`npm test`、`npm run build`。
 
-工作流配置不要求 GitHub Secrets。业务未实现的 skip 在日志中保留明确原因，不作为需求通过证据。当前配置尚未推送，因此尚无远程 Actions 运行记录。后端测试库隔离与服务容器配置分别参考 [Django 测试文档](https://docs.djangoproject.com/en/5.2/topics/testing/overview/) 和 [GitHub PostgreSQL service 文档](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers)。
+工作流配置不要求 GitHub Secrets。业务未实现的 skip 在日志中保留明确原因，不作为需求通过证据。推送后在 [GitHub Actions](https://github.com/XiangCheng66/CSC4801_superball/actions) 检查对应 commit 的真实运行结果。后端测试库隔离与服务容器配置分别参考 [Django 测试文档](https://docs.djangoproject.com/en/5.2/topics/testing/overview/) 和 [GitHub PostgreSQL service 文档](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers)。
 
 ## Optional Browser Smoke Test
 

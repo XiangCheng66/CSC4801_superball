@@ -20,7 +20,7 @@ Job 1 ── N Application N ── 1 User(Candidate)
 ## 五个设计决定
 
 1. **`Job.employer` 指向 `User`，不指向 `CompanyProfile`。**
-   所有权检查统一比较用户 ID，可直接配合 `common.permissions.get_owned_object(..., owner_field="employer_id")`。公司名展示走 `job.employer.company_profile.company_name`，列表查询需 `select_related("employer__companyprofile")`。
+   所有权检查统一比较用户 ID，可直接配合 `common.permissions.get_owned_object(..., owner_field="employer_id")`。公司名展示走 `job.employer.company_profile.company_name`，列表查询需 `select_related("employer__company_profile")`。
 
 2. **`CompanyProfile` 以 `user_id` 作主键。**
    一个雇主只有一份公司资料，URL 里不出现 profile ID，避免"猜 profile id 越权"这一类攻击面。
