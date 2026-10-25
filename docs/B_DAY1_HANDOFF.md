@@ -22,6 +22,8 @@
 
 ## 验证证据
 
+本机（Python 3.12.14，SQLite 内存测试库）：
+
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/unit -q
 # 51 passed, 13 skipped in 20.75s
@@ -29,6 +31,23 @@
 .venv\Scripts\python.exe manage.py makemigrations --check --dry-run --settings=config.test_settings
 # No changes detected
 ```
+
+容器（`docker compose build` → `docker compose up -d`，Docker 28.4.0，PostgreSQL 17.6，两个容器均 healthy）：
+
+```bash
+docker compose exec -T app python -m pytest tests/unit -q
+# 51 passed, 13 skipped
+
+docker compose exec -T -e TEST_DATABASE_ENGINE=postgresql app python -m pytest tests/unit -q
+# 51 passed, 13 skipped
+
+curl http://127.0.0.1:8000/api/health/
+# {"data":{"status":"ok","database":"postgresql"}}
+```
+
+`showmigrations` 显示 `accounts/employers/jobs/applications` 四个 `0001_initial` 全部应用；`makemigrations --check` 在容器内同样无遗漏。种子账号 `employer1` 登录成功，`/api/employer/session/` 返回 `Employer` 角色。
+
+**PostgreSQL 上的约束真实生效**：`LENGTH(TRIM(REPLACE(...))) > 0` 的 CHECK、`UNIQUE (job_id, LOWER(name))` 表达式索引、`PROTECT` 外键在该库上全部按测试预期行为，不是只在 SQLite 通过。
 
 基线为 A 交接记录的 `26 passed, 13 skipped`；本分支新增 25 项，未跳过任何既有用例。测试覆盖：
 
@@ -41,9 +60,10 @@
 - 新申请默认 `Pending`；重复投递被数据库拒绝且只留一条；
 - 四个状态都能存，`Hired` 被拒；常量与课程合同一致。
 
-## 尚未验证
+## 尚未验证与已知瑕疵
 
-- **未在 PostgreSQL 上实际执行**：本机没有 PostgreSQL 服务，Docker 未启动。约束表达式只用到 `LENGTH/TRIM/REPLACE/LOWER` 与表达式唯一索引，SQLite 与 PostgreSQL 都支持，但仍需有 Docker 或 PG 的机器跑一次 `TEST_DATABASE_ENGINE=postgresql`。
+- 首次全量镜像拉取（无基础镜像缓存）未测；本次构建复用了本机已有的 `python:3.12-slim-bookworm`、`node:22-bookworm-slim`、`postgres:17-bookworm`。
+- 容器内跑测试会出现 `PytestCacheWarning: could not create cache path /app/.pytest_cache`。原因是 `WORKDIR /app` 由 root 创建，Dockerfile 只 `chown` 了 `/app/data` 与 `/app/staticfiles`，pytest 想在 `/app` 写缓存时被拒。**不影响测试结果**，但审计方可能当成环境问题，建议由 A 在 Dockerfile 里补 `chown student:student /app`。B 未改这条公共基建。
 - 未实现 HTTP 接口、序列化器、页面；`test_workflows.py` 中 `test_fp_emp_1/2/3`、`test_fp_can_3` 仍是 skip，第二至三天替换为真实断言。
 - 未更新 `SPEC.md` 的完整数据模型章节（本分支只补了已有段落中的模型描述），待与 C 的时段模型一起汇总。
 - 未做 seed（`FP-DOC-3`），等接口可用后一次写完整业务数据。
