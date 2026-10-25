@@ -13,7 +13,7 @@
 求职者预约 → 求职者与雇主均能查看预约
 ```
 
-**当前阶段：A 的第一天基础已实现。** 已有 React 账号页面、Django/DRF 认证 API、PostgreSQL 配置与迁移、会话登录、角色/所有权检查基础、公共请求契约及真实认证测试。公司、岗位、申请、匹配和预约仍是后续计划；对应模板测试明确标为 skipped。课程正式要求优先于团队规划；修改实现时同步维护本文、`SPEC.md` 和 `INSTALL.md`。
+**当前阶段：A 的第一天基础与 C 的第一天匹配服务已实现。** 已有 React 账号页面、Django/DRF 认证 API、PostgreSQL 配置与迁移、会话登录、角色/所有权检查基础、公共请求契约及真实认证测试；新增共享匹配算法、两端排序、真实匹配测试和 CI 配置。公司、岗位、申请、推荐页面接入和预约仍是后续计划；对应模板测试明确标为 skipped。课程正式要求优先于团队规划；修改实现时同步维护本文、`SPEC.md` 和 `INSTALL.md`。
 
 ## Team Members
 
@@ -21,7 +21,7 @@
 - Isochiot
 - XiangCheng66（A：项目与认证基础、求职者模块）
 
-A 已由 XiangCheng66 认领；B/C 的实际负责人由团队补充，不预先替其他成员分配身份。
+A 已由 XiangCheng66 认领；C 职责已认领，成员姓名对应与 B 的实际负责人由团队补充。
 
 ## Architecture Summary
 
@@ -41,7 +41,7 @@ React 调用 Python API；后端校验角色、所有权和业务规则后访问
 
 ### 规划目录
 
-下列目录为整体目标结构；当前已建立 accounts/common/config 和 React 账号入口，其余业务目录由对应成员后续添加。
+下列目录为整体目标结构；当前已建立 accounts/common/config/matching 和 React 账号入口，其余业务目录由对应成员后续添加。
 
 ```text
 CSC4801_superball/
@@ -60,9 +60,10 @@ CSC4801_superball/
 │   ├── candidates/             # A
 │   ├── jobs/                   # B
 │   ├── applications/           # B
-│   ├── matching/               # C
+│   ├── matching/               # C：已建立共享评分与排序服务
 │   └── scheduling/             # C
 ├── tests/unit/
+├── .github/workflows/ci.yml    # C：后端测试、前端测试与构建
 ├── Dockerfile
 ├── SPEC.md
 ├── INSTALL.md
@@ -111,6 +112,8 @@ CSC4801_superball/
 | C | `/api/slots/`、`/api/bookings/`，以及后端共享匹配函数 |
 
 建议共享服务：`calculate_match_score(candidate_skills, required_skills)`、`apply_to_job(candidate, job_id)`、`update_application_status(employer, application_id, status)`、`book_interview(candidate, application_id, slot_id)`。
+
+匹配函数和 `rank_jobs/rank_applicants` 已实现，具体输入输出见 [共享匹配契约](docs/MATCHING_CONTRACT.md)。其余服务仍待对应模块实现；不得在前端或另一个后端模块复制评分公式。
 
 ### 必须保持的业务规则
 
@@ -193,15 +196,15 @@ docker compose up -d
 python -m pytest tests/unit -v
 ```
 
-`test_auth.py` 已改为真实业务测试，覆盖认证、密码哈希、角色/所有权、CSRF、唯一约束、SQL 绑定和错误合同。未实现的业务模板测试为 skipped，不算已完成。默认使用隔离 SQLite 内存库；PostgreSQL 隔离测试方式见 INSTALL.md。失败返回非零退出码。
+`test_auth.py` 和 `test_matching.py` 为真实业务测试，覆盖认证、密码哈希、角色/所有权、CSRF、唯一约束、SQL 绑定、错误合同、匹配示例与排序。单独验证 C 的匹配模块可执行 `python -m pytest tests/unit/test_matching.py -v`。未实现的业务模板测试为 skipped，不算已完成。默认使用隔离 SQLite 内存库；PostgreSQL 隔离测试方式见 INSTALL.md。失败返回非零退出码。
 
-前端在 `frontend` 目录执行 `npm test` 和 `npm run build`。可选真实浏览器测试为 `npm run test:e2e`，需先启动本地 PostgreSQL 演示环境和服务。CI 由 C 后续接入。
+前端在 `frontend` 目录执行 `npm test` 和 `npm run build`。可选真实浏览器测试为 `npm run test:e2e`，需先启动本地 PostgreSQL 演示环境和服务。C 已配置 `.github/workflows/ci.yml`，自动执行 PostgreSQL 后端测试、Django/迁移检查、前端测试和构建；尚待分支推送后验证 GitHub Actions 实际运行。
 
 覆盖成功、输入校验、权限和冲突情形，特别检查 `401/403/404`、技能归一化与两端同分排序、越权、SQL 绑定值、XSS 转义及预约冲突。课程只要求单元测试；数据库原子性仍需通过实现和运行环境验证。
 
 ## Requirement–Test Mapping
 
-**下表同时保留已实现基础与后续规划。** `tests/unit/test_auth.py` 为真实测试，其他模板业务测试当前 skipped。公共权限、SQL 和 XSS 基础的通过不能代替未来简历、岗位、申请和预约的授权/安全验证。
+**下表同时保留已实现基础与后续规划。** `tests/unit/test_auth.py` 和 `test_matching.py` 为真实测试，其他模板业务测试当前 skipped。公共权限、SQL 和 XSS 基础的通过不能代替未来简历、岗位、申请和预约的授权/安全验证。
 
 | Requirement ID | 负责人 / 行为 | 实现文件或位置（规划） | Unit test(s) / verification evidence（待完成） |
 |---|---|---|---|
@@ -215,7 +218,7 @@ python -m pytest tests/unit -v
 | FP-EMP-1 | B：公司资料 | 雇主资料模块（具体位置待定） | `tests/unit/test_workflows.py::test_fp_emp_1_company_profile` |
 | FP-EMP-2 | B：岗位校验、所有权、删除冲突 | `backend/jobs/` | `tests/unit/test_workflows.py::test_fp_emp_2_job_validation_and_deletion` |
 | FP-EMP-3 | B/C：申请人信息、排序、状态权限 | `backend/applications/`、`backend/matching/` | `tests/unit/test_workflows.py::test_fp_emp_3_applicant_fields_order_status_and_role` |
-| FP-MATCH-1 | C：固定公式、归一化、同分规则 | `backend/matching/` | `tests/unit/test_matching.py::test_fp_match_1_examples_normalization_and_floor`；`test_fp_match_1_both_tie_breakers`（同文件） |
+| FP-MATCH-1 | C：算法与排序已实现；业务页面与 seed 待接入 | `backend/matching/services.py`、`backend/matching/ranking.py` | `tests/unit/test_matching.py::test_fp_match_1_examples_normalization_and_floor`；`test_fp_match_1_both_tie_breakers`；`test_skill_normalization_does_not_mutate_input`；`test_invalid_skill_types_are_not_treated_as_empty`；`test_ranking_preserves_fields_without_mutating_rows`；`test_rankings_support_empty_rows_and_empty_skill_requirements`；`test_rankings_handle_one_shot_skill_and_row_iterables`；`test_resume_text_cannot_change_match_score_or_order`（同文件） |
 | FP-MATCH-2 | 可选 AI 增强 | N/A，当前未计划实现 | N/A；实现后新增数据流说明和具名单元测试 |
 | FP-SCHED-1 | C：未来 30 分钟时段及删除 | `backend/scheduling/` | `tests/unit/test_scheduling.py::test_fp_sched_1_slot_creation_timezones_and_deletion`；`test_fp_sched_1_invalid_slots`（同文件） |
 | FP-SCHED-2 | C：预约资格、可见性、状态变更后保留 | `backend/scheduling/` | `tests/unit/test_scheduling.py::test_fp_sched_2_eligible_booking`；`test_fp_sched_2_ineligible_booking`（同文件）；补充已有预约保留断言 |
@@ -228,24 +231,26 @@ python -m pytest tests/unit -v
 | FP-DOC-1 | A 牵头：安装可复现 | `INSTALL.md`、`Dockerfile` | 由未搭建环境的成员按文档完成干净安装 |
 | FP-DOC-2 | B 牵头：完整 README 与映射 | `README.md` | 逐项核对概览、架构、账号、测试、文档和全部需求映射 |
 | FP-DOC-3 | B 牵头：完整重置和 seed 待补；认证 seed 已有 | `backend/accounts/management/commands/seed_auth_demo.py`；业务 seed 待建立 | `tests/unit/test_auth.py::test_demo_seed_is_idempotent_and_has_only_demo_accounts`；完整业务数据仍待补 |
-| FP-TEST-1 | 全员：实际业务单元测试与完整命令 | `tests/unit/`、CI 配置（待建立） | 替换全部占位，覆盖每项功能及规定安全/冲突案例 |
+| FP-TEST-1 | 全员：认证与匹配已验证，其他模块待补 | `tests/unit/`、`.github/workflows/ci.yml` | 完整测试命令已接入 CI 配置；其余业务仍明确 skipped，后续继续替换 |
 | FP-SUB-1 | 全员：确切 main commit 与完整 Docker 环境 | Git、`Dockerfile`、`INSTALL.md` | 在提交 commit 验证构建、依赖启动、迁移、seed、测试与 UI |
 
 ## Document Index
 
 | 文档 | 用途 | 当前状态 |
 |---|---|---|
-| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | A/Day 1 状态与后续规划 |
-| [SPEC.md](SPEC.md) | 架构、模型、权限、API、匹配、预约事务与安全设计 | 认证基础已记录；业务设计待补 |
+| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | A+C/Day 1 状态与后续规划 |
+| [SPEC.md](SPEC.md) | 架构、模型、权限、API、匹配、预约事务与安全设计 | 认证、匹配与 CI 已记录；其余业务待补 |
 | [INSTALL.md](INSTALL.md) | 精确安装、启动、迁移、seed、测试和 Docker 指令 | 已提供基础运行方式 |
 | [公共 API 契约](docs/API_CONTRACT.md) | 会话、CSRF、JSON、错误码和模块接入示例 | 已落地 |
 | [A 第一天交接](docs/DAY1_HANDOFF.md) | 完成范围、验证证据、B/C 接入与后续工作 | 已提供 |
+| [共享匹配契约](docs/MATCHING_CONTRACT.md) | A/B 调用方式、技能与排序字段、授权和公开响应边界 | C 已实现 |
+| [C 第一天交接](docs/C_DAY1_HANDOFF.md) | 匹配、CI、验证记录及后续预约依赖 | 已提供 |
 | [Dockerfile](Dockerfile) / [compose.yaml](compose.yaml) | React/Python 构建和 PostgreSQL 环境 | 已配置，待 Docker 环境验证 |
 | [课程项目页](https://sra-research.github.io/CSC4801/project.html) | 课程项目与审计安排 | 结合教师公布的最新要求核对 |
 
 ## Known Limitations
 
-- 已完成账号基础；个人技能/简历、公司、岗位、申请、匹配、面试仍待后续实现，其业务测试明确 skipped。
-- Dockerfile 和 Compose 已配置，但本次机器没有 Docker，需补充容器构建证据。
+- 已完成账号基础和共享匹配服务；个人技能/简历、公司、岗位、申请、推荐页面接入、面试仍待后续实现，其业务测试明确 skipped。
+- Dockerfile 和 Compose 已配置，完整应用镜像构建证据待补。
 - 当前 seed 只包含认证账号；最终项目的完整重置命令、岗位、申请和竞争时段数据待补。
-- CI 尚未建立；B/C 职责认领和后续业务模型/API 需继续确认。公共认证、请求与权限契约已经确定。
+- CI 配置已建立，远程执行尚待分支推送；后续业务模型/API 和技能持久化需继续确认。公共认证、请求、权限和匹配契约已经确定。
