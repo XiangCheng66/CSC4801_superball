@@ -17,7 +17,13 @@
 
 用户名保存原拼写、登录不区分大小写；邮箱保存为小写。Django 数据库 Session 通过内置 session 表持久化。未来模块通过 `settings.AUTH_USER_MODEL` 建外键，不另建登录账号表，也不要迁移回默认 User。
 
-`CandidateProfile/CompanyProfile/Job/Application/InterviewSlot/Booking` 由后续模块建立，其关系和迁移在实现时补充此处。
+`CompanyProfile/Job/RequiredSkill/Application` 已由 B 建立（迁移 `employers.0001`、`jobs.0001`、`applications.0001`），字段、约束与接入约定见 [EMPLOYER_DOMAIN_CONTRACT.md](docs/EMPLOYER_DOMAIN_CONTRACT.md)：
+
+- `CompanyProfile` 以 `user_id` 为主键，一名雇主一份公司资料，含非空 `company_name` 与 `description`。
+- `Job` 通过 `employer` 外键指向 `accounts.User`（不是 CompanyProfile），标题与描述非空；`RequiredSkill` 为子表，同一岗位内技能名不区分大小写唯一，岗位可以没有技能。
+- `Application` 关联 `Job` 与候选人账号，`UNIQUE(job, candidate)` 阻止重复投递；`job` 外键使用 `PROTECT`，使带申请的岗位无法被删除并在接口层映射为 `409`；`status` 由 `CHECK` 约束限定为 `Pending/Interviewing/Rejected/Accepted`。
+
+`CandidateProfile/InterviewSlot/Booking` 由 A/C 建立，其关系和迁移在实现时补充此处。
 
 ## Authentication and Authorization
 
