@@ -1,6 +1,6 @@
-# Installation Guide — A + C / Day 1
+# Installation Guide — A Day 2 + B/C Day 1
 
-当前可运行 React 账号页面、Python 认证 API 和 PostgreSQL 数据库；共享匹配与排序可由后端调用并单独测试。公司、岗位、申请、推荐页面接入与预约仍待实现。本指南的 seed 只生成认证演示账号，不是最终项目的完整业务数据集。
+当前可运行账号、求职者资料/私有简历/全部岗位推荐，使用 Python API 与 PostgreSQL。雇主域业务 API、投递与预约仍待实现。Day 2 seed 提供技能和匹配例子，不是最终项目的完整业务重置数据集。
 
 ## Prerequisites and Versions
 
@@ -14,7 +14,7 @@
 在仓库根目录复制配置（Windows PowerShell）：
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 macOS/Linux 使用 `cp .env.example .env`。修改 `.env` 的 `DJANGO_SECRET_KEY` 与 `POSTGRES_PASSWORD` 占位值；可用 `python -c "import secrets; print(secrets.token_urlsafe(48))"` 生成本地随机值。`.env` 不提交，manage.py 和 Compose 均读取它。
@@ -41,6 +41,7 @@ macOS/Linux 使用 `cp .env.example .env`。修改 `.env` 的 `DJANGO_SECRET_KEY
 docker compose pull db
 docker compose build app
 docker compose up -d
+docker compose exec -T app python manage.py seed_candidate_demo
 docker compose ps
 ```
 
@@ -53,15 +54,15 @@ docker compose ps
 ```bash
 docker compose logs app
 docker compose exec app python manage.py migrate --noinput
-docker compose exec app python manage.py seed_auth_demo
-docker compose exec app python -m pytest tests/unit -q
-docker compose exec -e TEST_DATABASE_ENGINE=postgresql app python -m pytest tests/unit -q
+docker compose exec -T app python manage.py seed_candidate_demo
+docker compose exec -T app python -m pytest tests/unit -q -o cache_dir=/tmp/pytest-cache
+docker compose exec -T -e TEST_DATABASE_ENGINE=postgresql app python -m pytest tests/unit -q -o cache_dir=/tmp/pytest-cache
 docker compose down
 ```
 
 `postgres_data` 卷在普通 `down` 后保留。仅需完全重置本地 Compose 演示库时执行 `docker compose down --volumes`，然后重新 `docker compose up -d`；该操作会清空此 Compose 项目的数据库卷。
 
-完整应用镜像构建仍待验证；仅启动 PostgreSQL 测试容器不能代替应用 Dockerfile/Compose 的完整构建与启动验证。
+构建和容器验证证据见 docs/A_DAY2_HANDOFF.md。上述测试把缓存放到 /tmp，以适配镜像中非 root 的 student 用户。
 
 ## Local Development
 
@@ -84,7 +85,7 @@ Windows PowerShell：
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe manage.py migrate --noinput
-.\.venv\Scripts\python.exe manage.py seed_auth_demo
+.\.venv\Scripts\python.exe manage.py seed_candidate_demo
 .\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
 ```
 
@@ -94,7 +95,7 @@ macOS/Linux 对应命令：
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python manage.py migrate --noinput
-.venv/bin/python manage.py seed_auth_demo
+.venv/bin/python manage.py seed_candidate_demo
 .venv/bin/python manage.py runserver 127.0.0.1:8000
 ```
 
@@ -118,12 +119,12 @@ PowerShell 执行策略阻止 npm.ps1 时使用 `npm.cmd`。打开 **http://127.
 
 | 用户名 | 身份 | 密码 |
 |---|---|---|
-| `candidate1`、`candidate2` | Candidate | `LocalDemo!2026` |
+| `candidate1`、`candidate2`、`candidate3` | Candidate | `LocalDemo!2026` |
 | `employer1`、`employer2` | Employer | `LocalDemo!2026` |
 
-邮箱为 `<username>@example.test`。`python manage.py seed_auth_demo` 可重复执行，会更新这四个保留演示账号并重设演示密码，不删除其他用户，也不重置未来 B/C 的业务数据。
+邮箱为 `<username>@example.test`。`seed_auth_demo` 仍维护四个认证账号；`seed_candidate_demo` 复用它并增加 candidate3、三个候选人的技能、两个演示公司和两个 [DEMO-A2] 岗位（Python/SQL 要求和空要求）。两个命令都会恢复保留账号的公开演示密码和显示名；Day 2 命令保留简历、其他用户/岗位及申请/预约，不是清库命令。
 
-最终项目的一条完整重置/seed 命令、岗位、匹配案例、四种申请状态和预约竞争数据仍由 B/C 共同补齐。
+candidate1/2/3 的技能分别为 Python+SQL、Python、Rust，对 Python+SQL 岗位得分 100/50/0，对空要求岗位均为 100。完整重置、四种申请状态和预约竞争数据仍待 B/C 补齐。
 
 ## Running Unit Tests
 
@@ -156,7 +157,7 @@ npm run build
 .venv/bin/python -m pytest tests/unit/test_matching.py -v
 ```
 
-未实现的候选人业务、雇主业务和预约测试明确标记为 skipped，不是已完成需求。测试失败会返回非零退出码。
+FP-CAN-1/2 已替换为真实用例；尚未实现的投递/申请、雇主业务和预约共 9 项占位明确 skipped，不是通过的需求。测试失败返回非零退出码。
 
 ## Continuous Integration
 
@@ -170,14 +171,14 @@ npm run build
 
 ## Optional Browser Smoke Test
 
-先迁移并 seed 本地演示库，再启动上述后端和前端，在 frontend 目录执行：
+先迁移并执行 seed_candidate_demo（推荐浏览器测试依赖两个保留演示岗位），再启动服务；在 frontend 目录执行：
 
 ```bash
 npx playwright install chromium
 npm run test:e2e
 ```
 
-测试访问本地演示环境，验证登录、刷新恢复、角色检查、退出、注册、防重复以及手机布局。它会创建 `e2e_` 前缀的保留测试账号，使用可重置的本地演示库；不连接外部服务。
+浏览器测试访问本地演示环境，覆盖账号、资料/原文简历保存与刷新、跨用户隐私、推荐重算和手机布局。创建 e2e_ 前缀测试账号，不修改演示账号技能；不连接外部服务。
 
 已有 Edge 的 Windows 可不下载 Chromium：
 

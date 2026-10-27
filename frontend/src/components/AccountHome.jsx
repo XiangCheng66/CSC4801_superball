@@ -23,7 +23,7 @@ export default function AccountHome({ user, onUserChanged, onLoggedOut }) {
       <h2 id="account-title">你好，{user.display_name || user.username}</h2>
       <p className="muted">账号已就绪，欢迎来到 Superball。</p>
       <dl className="account-details"><div><dt>用户名</dt><dd>{user.username}</dd></div><div><dt>邮箱</dt><dd>{user.email}</dd></div><div><dt>身份</dt><dd>{user.role}</dd></div></dl>
-      <p className="hint">岗位、个人资料和面试功能正在分模块开发。本页提供已连接数据库的账号信息和会话操作。</p>
+      <p className="hint">{user.role === 'Candidate' ? '维护个人资料与私有简历，查看按技能匹配的岗位。' : '本页提供账号信息和会话操作，雇主业务页面正在开发。'}</p>
       {notice && <p className="notice" role="status">{notice}</p>}
       {error && <p className="error" role="alert">{error}</p>}
       <div className="actions">
