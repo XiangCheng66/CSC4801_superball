@@ -14,6 +14,16 @@
 
 ## 验证命令
 
+2026-10-27 验证结果：
+
+- 本机 Python 3.11：完整后端 129 passed、9 skipped；Django 检查、迁移遗漏检查与 pip check 通过。
+- 前端 Vitest：23 passed；Vite 生产构建通过。Docker 构建阶段也实际执行了这 23 项测试与打包。
+- 从功能提交的干净 Git archive 构建原始 Dockerfile；应用以 student 用户、DEBUG=0 运行，应用和 PostgreSQL 两个容器均 healthy。
+- 容器 Python 3.12：默认隔离 SQLite 和独立 PostgreSQL 测试库分别 129 passed、9 skipped；配置、迁移与依赖检查通过。
+- Edge/Playwright 访问容器页面与 API：5 passed，覆盖原账号流程、新求职者资料/原文简历保存和刷新、直接跨用户 GET/PUT 拒绝、技能变更后的推荐重算、零分岗位与手机布局。桌面/手机截图已检查。
+- 本地验证使用独立 Compose 项目 superball-a-day2、网站 8002、数据库 55434；只是端口覆盖，仓库原始 Compose 仍为 8000/5432。截图、日志、私有配置与构建副本保存在 Git 忽略目录，没有提交。
+- 剩余 9 项 skip 属于投递/申请、雇主业务工作流和预约，不能当作已完成功能。
+
 ```bash
 python -m pytest tests/unit -q
 TEST_DATABASE_ENGINE=postgresql python -m pytest tests/unit -q

@@ -47,6 +47,7 @@ test('candidate saves and reloads private raw text; direct cross-user access is 
   expect((await put(request, `/api/candidate/resumes/${owner.id}/`, { resume_text: 'intrusion' })).status()).toBe(403);
   expect((await page.request.get(`/api/candidate/resumes/${other.id}/`)).status()).toBe(403);
   expect((await (await page.request.get('/api/candidate/resume/')).json()).data.resume_text).toBe(raw);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: 'test-results/candidate-profile-desktop.png', fullPage: true });
 });
 

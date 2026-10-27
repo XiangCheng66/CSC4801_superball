@@ -30,10 +30,10 @@ A 已由 XiangCheng66 认领；C 职责已认领，成员姓名对应与 B 的�
 | 部分 | 开发基线 | 职责 |
 |---|---|---|
 | 前端 | React（已确定） | 页面、表单、交互与 API 调用 |
-| 后端 | Python + Django 5.2 + Django REST Framework | 已建立认证、权限基础和 JSON API；其余业务后续扩展 |
-| 数据库 | PostgreSQL 17 | 已建立账号、公司、岗位、岗位技能和申请迁移；预约约束后续补充 |
+| 后端 | Python + Django 5.2 + Django REST Framework | 已建立认证、求职者资料/简历/推荐 API；雇主与预约接口待补 |
+| 数据库 | PostgreSQL 17 | 已建立账号、求职者资料、公司、岗位、岗位技能和申请迁移；预约约束后续补充 |
 | 验证 | pytest + pytest-django；Vitest；可选 Playwright | 默认隔离内存测试库，也支持独立 PostgreSQL 测试库 |
-| 交付 | 多阶段 Dockerfile + Compose | 已配置 React 构建、Python 服务与 PostgreSQL；本机 Docker 验证待补 |
+| 交付 | 多阶段 Dockerfile + Compose | 已验证本地干净镜像构建、Python 服务与 PostgreSQL，见 A Day 2 交接 |
 
 React 调用 Python API；后端校验角色、所有权和业务规则后访问数据库，并返回 JSON。匹配分数和预约资格由后端统一计算和校验。
 
@@ -104,11 +104,11 @@ CSC4801_superball/
 3. 唯一约束：账号标识、`Application(candidate_id, job_id)`、`Booking.slot_id`、`Booking.application_id`。
 4. API 请求字段、响应字段、错误码及公共服务函数。数据库模型和迁移变更提前通知队友。
 
-认证接口及字段已记录在 `SPEC.md` 和公共 API 契约；以下业务范围仍是后续接口草稿：
+认证、求职者资料/简历及推荐接口已实现，详见 SPEC 与公共/求职者契约；以下范围同时包含已实现的 A 接口和 B/C 的后续接口草稿：
 
 | 负责人 | API 范围草稿 |
 |---|---|
-| A | `/api/auth/`、`/api/candidate/profile/`、`/api/candidate/resume/` |
+| A | `/api/auth/`、`/api/candidate/profile/`、`/api/candidate/resume/`、`/api/candidate/recommendations/` |
 | B | `/api/jobs/`、`/api/applications/`、`/api/employer/` |
 | C | `/api/slots/`、`/api/bookings/`，以及后端共享匹配函数 |
 
