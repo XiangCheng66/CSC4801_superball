@@ -13,7 +13,7 @@
 求职者预约 → 求职者与雇主均能查看预约
 ```
 
-**当前阶段：A、B、C 的第一天交付已集成。** A 提供 React 账号页面、Django/DRF 认证 API、PostgreSQL 配置、会话登录与公共权限/请求契约；B 提供公司、岗位、岗位技能和申请的模型、数据库约束及迁移；C 提供共享匹配算法、两端排序和 CI。认证、雇主域模型和匹配均有真实测试。个人技能/简历、公司/岗位/申请的 HTTP 接口与页面、推荐页面接入和预约仍待实现；对应模板测试明确标为 skipped。课程正式要求优先于团队规划；修改实现时同步维护本文、`SPEC.md` 和 `INSTALL.md`。
+**当前阶段：A/B/C 的第一天交付已集成；B 已推进到第二天。** A 提供 React 账号页面、Django/DRF 认证 API、PostgreSQL 配置、会话登录与公共权限/请求契约；B 提供公司、岗位、岗位技能和申请的模型与约束，并新增公司资料、岗位管理的 HTTP 接口和雇主工作台页面；C 提供共享匹配算法、两端排序和 CI。认证、雇主域模型、雇主接口和匹配均有真实测试。个人技能/简历、申请与申请人管理、推荐页面接入和预约仍待实现；对应模板测试明确标为 skipped。课程正式要求优先于团队规划；修改实现时同步维护本文、`SPEC.md` 和 `INSTALL.md`。
 
 ## Team Members
 
@@ -218,8 +218,8 @@ python -m pytest tests/unit -v
 | FP-CAN-1 | A：资料、技能、私有简历 | `backend/candidates/` | `tests/unit/test_workflows.py::test_fp_can_1_profile_and_private_resume_rules` |
 | FP-CAN-2 | A/C：全部岗位、分数和排序 | `backend/candidates/`、`backend/matching/` | `tests/unit/test_workflows.py::test_fp_can_2_recommendations_preserve_fields_and_rank_all_jobs` |
 | FP-CAN-3 | A/B：申请默认状态与防重复模型约束已实现；接口待补 | `backend/applications/` | `tests/unit/test_employer_domain_models.py::test_fp_can_3_new_application_defaults_to_pending`；`test_fp_can_3_duplicate_application_is_rejected_by_the_database`（同文件）；工作流测试仍 skipped |
-| FP-EMP-1 | B：公司资料模型及约束已实现；接口待补 | `backend/employers/` | `tests/unit/test_employer_domain_models.py::test_fp_emp_1_company_profile_is_one_per_employer`；`test_fp_emp_1_company_name_must_not_be_blank`（同文件）；工作流测试仍 skipped |
-| FP-EMP-2 | B：岗位/技能约束和申请删除保护已实现；接口与时段关联待补 | `backend/jobs/` | `tests/unit/test_employer_domain_models.py::test_fp_emp_2_required_skills_are_case_insensitive_unique_per_job`；`test_fp_emp_2_delete_job_with_applications_is_protected`（同文件）；工作流测试仍 skipped |
+| FP-EMP-1 | B：公司资料接口、模型与约束已实现 | `backend/employers/`、`frontend/src/pages/employer/` | `tests/unit/test_employer_api.py::test_fp_emp_1_employer_creates_and_reads_own_profile`；`test_fp_emp_1_invalid_profile_is_rejected`；`test_fp_emp_1_candidate_and_anonymous_cannot_touch_a_company_profile`；`test_fp_emp_1_profile_is_missing_until_created`（同文件）；模型约束见 `test_employer_domain_models.py::test_fp_emp_1_company_profile_is_one_per_employer`；页面 `EmployerWorkspace.test.jsx::saves the company profile through the API` |
+| FP-EMP-2 | B：岗位 CRUD、所有权与删除 409 已实现；面试时段关联待 C 接入 | `backend/jobs/`、`frontend/src/pages/employer/` | `tests/unit/test_employer_api.py::test_fp_emp_2_employer_creates_a_posting_with_skills`；`test_fp_emp_2_skills_are_trimmed_and_deduplicated_case_insensitively`；`test_fp_emp_2_detail_distinguishes_404_and_403`；`test_fp_emp_2_other_employer_cannot_edit_or_delete`；`test_fp_emp_2_delete_posting_with_applications_returns_409`（同文件）；模型约束见 `test_employer_domain_models.py::test_fp_emp_2_required_skills_are_case_insensitive_unique_per_job` 与 `::test_fp_emp_2_delete_job_with_applications_is_protected` |
 | FP-EMP-3 | B/C：四态模型约束和共享排序已实现；查询/状态权限接口待补 | `backend/applications/`、`backend/matching/` | `tests/unit/test_employer_domain_models.py::test_fp_emp_3_all_four_statuses_are_storable`；`test_fp_emp_3_unknown_status_is_rejected_by_the_database`（同文件）；工作流测试仍 skipped |
 | FP-MATCH-1 | C：算法与排序已实现；业务页面与 seed 待接入 | `backend/matching/services.py`、`backend/matching/ranking.py` | `tests/unit/test_matching.py::test_fp_match_1_examples_normalization_and_floor`；`test_fp_match_1_both_tie_breakers`；`test_skill_normalization_does_not_mutate_input`；`test_invalid_skill_types_are_not_treated_as_empty`；`test_ranking_preserves_fields_without_mutating_rows`；`test_rankings_support_empty_rows_and_empty_skill_requirements`；`test_rankings_handle_one_shot_skill_and_row_iterables`；`test_resume_text_cannot_change_match_score_or_order`（同文件） |
 | FP-MATCH-2 | 可选 AI 增强 | N/A，当前未计划实现 | N/A；实现后新增数据流说明和具名单元测试 |

@@ -50,6 +50,15 @@
 | GET | `/api/auth/users/<id>/` | 仅本人账号 |
 | GET | `/api/candidate/session/` | 求职者角色检查 |
 | GET | `/api/employer/session/` | 雇主角色检查 |
+| GET | `/api/employer/company/` | 本人公司资料；未创建 404 |
+| PUT | `/api/employer/company/` | 新建或覆盖公司资料；201/200 |
+| GET | `/api/employer/jobs/` | 本人岗位列表 |
+| POST | `/api/employer/jobs/` | 发布岗位；201 |
+| GET | `/api/employer/jobs/<id>/` | 岗位详情；他人 403、缺失 404 |
+| PATCH | `/api/employer/jobs/<id>/` | 部分更新，技能可整体替换 |
+| DELETE | `/api/employer/jobs/<id>/` | 删除；有申请或时段时 409 `job_has_dependents` |
+
+岗位接口的 `employer` 永远取自会话，客户端传入会被 `StrictSerializer` 拒绝；列表按当前账号过滤。`required_skills` 在写入时去空白、丢弃空项并按大小写不敏感去重。
 
 成功包裹为 `data`；失败包裹为带 `code/message/fields?` 的 `error`。未知 API 路径在开发与非调试模式下均返回 JSON 404；路径需要末尾斜杠。
 
@@ -57,7 +66,9 @@
 
 响应式账号入口含登录和注册切换。注册可选择两种角色，成功后显示服务端返回的账号信息；账号首页可刷新数据库账号信息、验证角色权限、退出。页面重新加载会通过 `/api/auth/me/` 恢复会话。字段校验与网络失败有可读提示。
 
-React 使用文本插值显示用户输入，不使用 `dangerouslySetInnerHTML`。手机布局有实际浏览器无横向溢出检查。尚无资料编辑、岗位、申请和预约页面。
+雇主账号登录后进入 `frontend/src/pages/employer/EmployerWorkspace.jsx`：上方维护公司资料（未创建时表单为空，`404` 不视为错误），下方发布岗位、行内编辑标题/描述/技能、删除岗位。删除被 `409` 拒绝时显示"该岗位仍有申请或面试时段，无法删除"，列表保持原样。
+
+React 使用文本插值显示用户输入，不使用 `dangerouslySetInnerHTML`。手机布局有实际浏览器无横向溢出检查。求职者资料与简历、申请、申请人列表和预约页面尚未实现。
 
 ## Matching Algorithm and Skill Storage
 

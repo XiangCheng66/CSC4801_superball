@@ -21,6 +21,14 @@ class AccountConflict(exceptions.APIException):
     default_code = "account_conflict"
 
 
+class JobHasDependents(exceptions.APIException):
+    """FP-EMP-2: a posting with applications or interview slots cannot be deleted."""
+
+    status_code = 409
+    default_detail = "This job still has applications or interview slots."
+    default_code = "job_has_dependents"
+
+
 def api_exception_handler(exc, context):
     response = exception_handler(exc, context)
     if response is None:

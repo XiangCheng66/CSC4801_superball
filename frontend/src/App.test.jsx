@@ -3,13 +3,22 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import App from './App';
 import { authApi } from './api/auth';
 import { ApiError } from './api/client';
+import { employerApi } from './api/employer';
 
 vi.mock('./api/auth', () => ({ authApi: { me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn(), workspace: vi.fn() } }));
+vi.mock('./api/employer', () => ({
+  employerApi: {
+    getCompany: vi.fn(), saveCompany: vi.fn(), listJobs: vi.fn(),
+    createJob: vi.fn(), updateJob: vi.fn(), deleteJob: vi.fn(),
+  },
+}));
 const user = { id: 1, username: 'alice', email: 'alice@example.test', display_name: 'Alice', role: 'Candidate' };
 
 beforeEach(() => {
   vi.resetAllMocks();
   authApi.me.mockRejectedValue(new ApiError('Please log in', { status: 401 }));
+  employerApi.getCompany.mockRejectedValue(new ApiError('Not found', { status: 404, code: 'not_found' }));
+  employerApi.listJobs.mockResolvedValue([]);
 });
 
 it('shows login for an anonymous visitor and logs in with submitted credentials', async () => {
