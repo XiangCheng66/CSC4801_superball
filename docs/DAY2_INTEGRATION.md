@@ -5,8 +5,10 @@
 | 角色 | 分支 | 原始 head | 本次保留的功能 |
 |---|---|---|---|
 | A | feat/a-day2-candidate-profile | cf711bc692c4143005b5d2d821519d1cf0fe32bc | 资料、技能、私有原文简历、全岗位推荐 |
-| B | feat/b-day2-employer-api | d2d8ba8 | 公司资料和本人岗位 CRUD、删除冲突 |
-| C | feat/c-day2-availability | bf716eb | 雇主未来 30 分钟时段、UTC/北京时间、删除保护 |
+| B | feat/b-day2-employer-api | d2d8ba83798b2ba7edd75863b8652c84925d1ae1 | 公司资料和本人岗位 CRUD、删除冲突 |
+| C | feat/c-day2-availability | bf716eb21892952447dea69f616505f66545f7a1 | 雇主未来 30 分钟时段、UTC/北京时间、删除保护 |
+
+对应 PR：[A #2](https://github.com/XiangCheng66/CSC4801_superball/pull/2)、[B #3](https://github.com/XiangCheng66/CSC4801_superball/pull/3)、[C #4](https://github.com/XiangCheng66/CSC4801_superball/pull/4)。合并保留三个分支的原始 head 和作者信息。
 
 ## 集成调整
 
@@ -22,7 +24,16 @@
 
 `frontend/e2e/day2-integration.spec.js` 用两个独立浏览器身份执行同一流程，并确认岗位技能编辑后推荐更新为零分，以及新岗位自动进入时段选择列表。原始 A/B/C 浏览器用例也全部保留。
 
-本机初步验证：完整后端 218 passed、5 skipped；前端 44 passed，生产构建成功。Docker、PostgreSQL、浏览器与远程 CI 在发布 main 前复验，实际结果应对应最终 main commit 的 Actions 与本地验证日志，不使用各分支历史数字替代。
+2026-11-01 集成验证：
+
+- 本机完整后端 218 passed、5 skipped；前端 44 passed，生产构建成功。
+- 从干净 Git archive 构建 Docker 镜像；构建阶段实际运行前端测试和生产打包。应用以 student 用户、DEBUG=0 运行，没有源码绑定挂载。
+- 容器内 SQLite 和独立 PostgreSQL 测试库分别 218 passed、5 skipped；Django 配置、迁移遗漏和依赖检查通过。
+- Edge/Playwright 访问容器页面与真实 API：10 passed，覆盖 A/B/C 原有流程和跨模块联动；桌面与手机截图已检查。
+- 独立 Compose 项目 superball-day2-integrated，网站 8003、数据库宿主机端口 55435；app/db 均 healthy，健康接口确认 PostgreSQL。原有预览和数据卷保留。
+- 源码、私有配置排除、25 项需求映射和文档链接检查通过；日志、截图、私有 .env 与构建副本保留在 Git 忽略的 .runtime 目录。
+
+集成功能提交为 `20f4128109f5b178622c6f261fedc8167a1c939a`；之后仅补充本验证记录。最终 main 的确切提交及远程检查，以该提交的 GitHub Actions 为准，不以各分支历史测试数字替代。
 
 ## 启动与演示
 
