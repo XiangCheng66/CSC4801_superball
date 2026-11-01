@@ -3,13 +3,17 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import App from './App';
 import { authApi } from './api/auth';
 import { ApiError } from './api/client';
+import { candidateApi } from './api/candidate';
 
 vi.mock('./api/auth', () => ({ authApi: { me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn(), workspace: vi.fn() } }));
+vi.mock('./api/candidate', () => ({ candidateApi: { profile: vi.fn(), resume: vi.fn() } }));
 const user = { id: 1, username: 'alice', email: 'alice@example.test', display_name: 'Alice', role: 'Candidate' };
 
 beforeEach(() => {
   vi.resetAllMocks();
   authApi.me.mockRejectedValue(new ApiError('Please log in', { status: 401 }));
+  candidateApi.profile.mockResolvedValue({ user_id: 1, display_name: 'Alice', skills: [] });
+  candidateApi.resume.mockResolvedValue({ user_id: 1, resume_text: '' });
 });
 
 it('shows login for an anonymous visitor and logs in with submitted credentials', async () => {

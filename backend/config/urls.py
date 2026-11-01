@@ -5,6 +5,7 @@ from common.views import HealthView, api_not_found, spa
 urlpatterns = [
     path("api/health/", HealthView.as_view(), name="health"),
     path("api/", include("accounts.urls")),
+    path("api/", include("candidates.urls")),
     re_path(r"^api(?:/.*)?$", api_not_found),
     re_path(r"^(?!api(?:/|$)).*$", spa, name="frontend"),
 ]

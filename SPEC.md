@@ -1,8 +1,8 @@
-# Project Specification — A + B + C / Day 1
+# Project Specification — A Day 2 + B/C Day 1
 
 ## Product Scope
 
-已实现项目骨架、两种角色的注册/登录/退出、当前账号查询、角色/所有权校验基础、公共请求/错误契约、数据库健康检查和认证演示账号。B 已提供公司、岗位、岗位技能与申请模型、数据库约束和迁移；C 已提供共享匹配分数与两端排序服务、真实单元测试和 CI 配置。候选人技能与私有简历、雇主域 HTTP 接口与页面、推荐页面接入与面试业务尚未实现。
+已实现账号基础和 A Day 2：求职者资料、持久化技能、私有文字简历及全部岗位推荐；B 的公司/岗位/申请模型与 C 的共享匹配/排序、CI 保留。投递及申请列表、雇主业务 HTTP 接口/页面、时段预约尚未实现。
 
 ## Architecture
 
@@ -24,7 +24,7 @@
 - `Job` 通过 `employer` 外键指向 `accounts.User`（不是 CompanyProfile），标题与描述非空；`RequiredSkill` 为子表，同一岗位内技能名不区分大小写唯一，岗位可以没有技能。
 - `Application` 关联 `Job` 与候选人账号，`UNIQUE(job, candidate)` 阻止重复投递；`job` 外键使用 `PROTECT`，使带申请的岗位无法被删除并在接口层映射为 `409`；`status` 由 `CHECK` 约束限定为 `Pending/Interviewing/Rejected/Accepted`。
 
-`CandidateProfile/InterviewSlot/Booking` 由 A/C 建立，其关系和迁移在实现时补充此处。
+`candidates.CandidateProfile` 以用户 ID 为主键，一对一关联 User，保存 skills JSON 数组、resume_text 原文及创建/更新时间。显示名仍以 User.display_name 为唯一来源。读取未保存资料的账号返回空技能/简历，不写数据库；首次 PUT 创建资料。资料与简历写操作锁定同一个 User 行，只更新各自字段，资料和显示名在同一事务提交。InterviewSlot/Booking 仍由 C 后续建立。
 
 ## Authentication and Authorization
 
@@ -50,6 +50,13 @@
 | GET | `/api/auth/users/<id>/` | 仅本人账号 |
 | GET | `/api/candidate/session/` | 求职者角色检查 |
 | GET | `/api/employer/session/` | 雇主角色检查 |
+| GET/PUT | `/api/candidate/profile/` | 本人显示名与技能 |
+| GET/PUT | `/api/candidate/profiles/<user_id>/` | 仅本人可访问的显式 ID 别名 |
+| GET/PUT | `/api/candidate/resume/` | 本人私有简历原文 |
+| GET/PUT | `/api/candidate/resumes/<user_id>/` | 仅本人可访问的显式 ID 别名 |
+| GET | `/api/candidate/recommendations/` | 全部岗位与共享匹配排序 |
+
+字段与严格输入校验见 [CANDIDATE_CONTRACT.md](docs/CANDIDATE_CONTRACT.md)。所有求职者接口先检查认证/角色，ID 别名再查用户和所有权，分别返回 401/403/404；简历仅在本人简历接口返回。资料、公开账号和推荐均不包含简历。
 
 成功包裹为 `data`；失败包裹为带 `code/message/fields?` 的 `error`。未知 API 路径在开发与非调试模式下均返回 JSON 404；路径需要末尾斜杠。
 
@@ -57,7 +64,7 @@
 
 响应式账号入口含登录和注册切换。注册可选择两种角色，成功后显示服务端返回的账号信息；账号首页可刷新数据库账号信息、验证角色权限、退出。页面重新加载会通过 `/api/auth/me/` 恢复会话。字段校验与网络失败有可读提示。
 
-React 使用文本插值显示用户输入，不使用 `dangerouslySetInnerHTML`。手机布局有实际浏览器无横向溢出检查。尚无资料编辑、岗位、申请和预约页面。
+React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 登录后进入工作台：保留账号操作，个人资料区分别保存显示名/技能与私有简历，原文可预览；推荐区列出全部岗位、整数分数、公司、技能与可展开描述。资料草稿切换入口时保留，保存技能后重新查询推荐；Employer 保留账号页。手机布局通过浏览器检查。申请和预约页面仍待实现。
 
 ## Matching Algorithm and Skill Storage
 
@@ -65,11 +72,11 @@ React 使用文本插值显示用户输入，不使用 `dangerouslySetInnerHTML`
 
 技能输入为字符串列表，归一化为去首尾空格、转小写、去空值和去重的集合 C/R。R 为空时得分 100，否则用整数运算 `100 * len(C & R) // len(R)` 向下取整；简历不是评分参数。非法技能类型抛出 TypeError，HTTP 层须先用 serializer 验证。
 
-岗位技能已由 B 的 `RequiredSkill` 子表持久化，保存时去首尾空白，同一岗位内名称不区分大小写唯一。`Job.required_skill_names` 将子表转换为字符串列表，调用方可映射为 `rank_jobs` 的 `required_skills` 字段；批量查询应预取 `required_skills`。求职者技能存储由 A 后续建立，并转换为同一计算契约。匹配服务只接收内存集合，不直接读取数据库。
+岗位技能由 B 的 RequiredSkill 子表保存，Job.required_skill_names 转换为列表；查询推荐时预取 required_skills。求职者技能由 CandidateProfile.skills JSONField 保存：API 严格接收字符串数组，strip/lower/去空值/去重/排序，单项去首尾空白后的输入及规范化结果不超过 100 字符。无资料时按空技能计算；matching 只接收内存集合，不直接读库。
 
 两端评分调用同一函数。职位排序按分数降序、标题 casefold、整数职位 ID；申请人排序按分数降序、显示名 casefold、整数求职者 User ID（不是申请 ID）。返回新列表和浅拷贝行，保留其他字段并覆盖旧分数，不修改输入。A 负责提供全部当前职位；B 负责提供已授权职位的申请人；调用方负责筛选公开输出字段，严禁泄露简历。
 
-规定的四种匹配示例、归一化、向下取整、双方同分规则等由真实单元测试验证。尚待 A/B 接入页面/API，以及 B 的完整业务 seed；不能将共享函数完成视为 FP-CAN-2/FP-EMP-3 的完整工作流完成。
+A 的 RecommendationsView 查询全部实际存在的 Job，预加载雇主公司与岗位技能，再调用 rank_jobs，不分页、不丢弃零分岗位。公司不存在时使用雇主显示名，再回退用户名。响应字段白名单见求职者契约。seed_candidate_demo 的三个候选人与两个岗位覆盖 100/50/0/空要求 100；B 的申请人接口与完整业务重置仍待补。
 
 ## Interview Scheduling and Booking Transaction
 
@@ -89,9 +96,9 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 ## Design Decisions and Limitations
 
-当前完成 A 的第一天基础、B 的雇主域模型与 C 的共享匹配服务。认证/公共权限及模型约束不能证明未来岗位、简历或预约的 HTTP 授权已经实现；各模块仍须补充对象边界和具名测试。
+当前完成 A Day 2 与 B/C Day 1；认证、资料和推荐均有实际接口/页面，但不能由此推断未来申请、雇主操作与预约授权已实现。其余 9 项业务模板仍 skipped。
 
-数据库时刻采用 UTC（`USE_TZ=True`），预约展示时区由 C 在实现时明确。Docker/Compose 文件已建立，完整应用镜像构建证据仍待补充；完整业务 seed 由 B/C 后续完成。
+数据库时刻采用 UTC（USE_TZ=True），预约展示时区待 C 明确。A Day 2 构建和验证记录见 docs/A_DAY2_HANDOFF.md；业务 seed 只更新保留演示记录，不清空其他数据，完整申请/预约重置仍由 B/C 补齐。
 
 ## Continuous Integration
 

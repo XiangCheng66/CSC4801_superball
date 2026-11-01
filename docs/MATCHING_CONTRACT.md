@@ -1,7 +1,7 @@
 # 共享匹配契约 — C / Day 1
 
 适用需求：FP-MATCH-1；为 A 的 FP-CAN-2 和 B 的 FP-EMP-3 提供共享计算。
-本模块已经实现，职位/申请查询、HTTP 接口及页面尚待 A/B 接入。
+共享计算已实现；A 的职位查询与推荐页面已接入，B 的申请人 HTTP 接口尚待接入。
 
 ## 导入与执行环境
 
@@ -22,7 +22,7 @@ from matching import normalize_skills, calculate_match_score, rank_jobs, rank_ap
 - `calculate_match_score(candidate_skills, required_skills)` 返回整数：要求为空为 100，否则为 `100 * len(C & R) // len(R)`。
 - 输入不被修改，简历正文不是评分参数。原始技能列表可保留显示拼写，每次评分时统一归一化。
 
-技能的数据库字段尚未建立，不能声称已经持久化。建议 A/B 后续使用有字符串列表校验的 JSONField，或使用技能关联表并适配成相同列表；最终方案由模型负责人落地后更新 SPEC。匹配模块不依赖该选择。
+求职者技能已落地在 candidates.CandidateProfile.skills（经严格校验并规范化的 JSON 字符串数组）；岗位技能为 jobs.RequiredSkill 子表，经 Job.required_skill_names 转成列表。无求职者资料时按 [] 计算。A 的推荐接口已接入 rank_jobs；B 后续可通过 user.candidate_profile.skills 读取技能，但必须先检查雇主角色和岗位所有权，不得把 profile 整体序列化。
 
 ## A：职位推荐
 
@@ -73,7 +73,7 @@ B 负责先验证雇主角色和岗位所有权，再查询该职位申请人；
 A/B 应显式选择公开字段，尤其不能向雇主发送简历正文、密码哈希或会话秘密。
 
 课程四种分数示例已经进入单元测试；B 的完整业务 seed 尚未建立，需要复用同样的示例。
-任何 AI 解释均不能修改本模块输出的分数或顺序。
+seed_candidate_demo 已提供三组候选人技能与两个岗位，覆盖四种规定分数；完整申请/预约 seed 仍待补齐。任何 AI 解释均不能修改本模块输出的分数或顺序。
 
 ## 验证
 
