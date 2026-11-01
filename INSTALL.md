@@ -1,6 +1,6 @@
-# Installation Guide — A Day 2 + B/C Day 1
+# Installation Guide — A/B/C Day 2
 
-当前可运行账号、求职者资料/私有简历/全部岗位推荐，使用 Python API 与 PostgreSQL。雇主域业务 API、投递与预约仍待实现。Day 2 seed 提供技能和匹配例子，不是最终项目的完整业务重置数据集。
+当前可运行账号、资料/私有简历/岗位推荐、公司/岗位管理与雇主面试时段。投递、申请人状态和候选人预约仍待实现；演示 seed 不替代最终完整业务重置。
 
 ## Prerequisites and Versions
 
@@ -42,6 +42,7 @@ docker compose pull db
 docker compose build app
 docker compose up -d
 docker compose exec -T app python manage.py seed_candidate_demo
+docker compose exec -T app python manage.py seed_availability_demo
 docker compose ps
 ```
 
@@ -157,7 +158,7 @@ npm run build
 .venv/bin/python -m pytest tests/unit/test_matching.py -v
 ```
 
-FP-CAN-1/2 已替换为真实用例；尚未实现的投递/申请、雇主业务和预约共 9 项占位明确 skipped，不是通过的需求。测试失败返回非零退出码。
+资料/推荐、公司/岗位和时段管理均有真实用例；尚未实现的申请及预约共 5 项占位明确 skipped，不是通过的需求。
 
 ## Continuous Integration
 
@@ -171,14 +172,14 @@ FP-CAN-1/2 已替换为真实用例；尚未实现的投递/申请、雇主业�
 
 ## Optional Browser Smoke Test
 
-先迁移并执行 seed_candidate_demo（推荐浏览器测试依赖两个保留演示岗位），再启动服务；在 frontend 目录执行：
+先 migrate，顺序执行 seed_candidate_demo 与 seed_availability_demo；完整浏览器测试依赖这两组演示数据。启动服务后在 frontend 执行：
 
 ```bash
 npx playwright install chromium
 npm run test:e2e
 ```
 
-浏览器测试访问本地演示环境，覆盖账号、资料/原文简历保存与刷新、跨用户隐私、推荐重算和手机布局。创建 e2e_ 前缀测试账号，不修改演示账号技能；不连接外部服务。
+浏览器测试覆盖三人的独立功能，以及新雇主发布岗位→新求职者推荐→真实时段删除保护的集成流程；使用 e2e_ 演示账号，不调用外部服务。
 
 已有 Edge 的 Windows 可不下载 Chromium：
 
@@ -198,3 +199,18 @@ npm.cmd run test:e2e
 - Node 引擎不兼容：使用 Node 22.12+（22 系列）。若 npm 10 安装出现 `edgesOut` 内部错误，可执行 `npx --yes npm@11 ci`，无需全局改动。
 - 后端直接访问 `/` 返回 `frontend_not_built`：本机开发使用 Vite 的 5173 入口；容器构建会复制并提供前端文件。
 - 端口占用：先确认运行中的本地实例，再调整端口与对应代理/CSRF 配置。
+
+## C Day 2：运行时段管理
+
+在已迁移的演示库顺序执行：
+
+```bash
+python manage.py seed_candidate_demo
+python manage.py seed_availability_demo
+```
+
+Compose 对应命令为 `docker compose exec -T app python manage.py seed_availability_demo`。时段 seed 为 employer1 的保留岗位添加北京时间明天 09:00、09:30 两个时段，同一天重复执行幂等，不清空历史时段和预约。employer2 有自己的 Generalist 岗位，但看不到 employer1 的岗位/时段。
+
+雇主登录后的工作台同时显示公司/岗位和时段。发布、编辑或删除岗位会自动刷新时段选择；时段 UI 固定北京时间，API 使用 UTC。有时段的岗位删除返回 409，先删除允许删除的时段后才能删除岗位。候选人预约入口尚未实现。
+
+单独测试：`python -m pytest tests/unit/test_scheduling.py -q -ra`。完整整合验证见 [Day 2 集成记录](docs/DAY2_INTEGRATION.md)。

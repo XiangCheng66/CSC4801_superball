@@ -3,14 +3,22 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import App from './App';
 import { authApi } from './api/auth';
 import { ApiError } from './api/client';
+import { employerApi } from './api/employer';
+import { availabilityApi } from './api/scheduling';
 import { candidateApi } from './api/candidate';
 
 vi.mock('./api/auth', () => ({ authApi: { me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn(), workspace: vi.fn() } }));
 vi.mock('./api/candidate', () => ({ candidateApi: { profile: vi.fn(), resume: vi.fn() } }));
+vi.mock('./api/employer', () => ({ employerApi: { getCompany: vi.fn(), listJobs: vi.fn(), saveCompany: vi.fn(), createJob: vi.fn(), updateJob: vi.fn(), deleteJob: vi.fn() } }));
+vi.mock('./api/scheduling', () => ({ availabilityApi: { jobs: vi.fn(), list: vi.fn(), create: vi.fn(), remove: vi.fn() } }));
 const user = { id: 1, username: 'alice', email: 'alice@example.test', display_name: 'Alice', role: 'Candidate' };
 
 beforeEach(() => {
   vi.resetAllMocks();
+  employerApi.getCompany.mockRejectedValue(new ApiError('Not found', { status: 404 }));
+  employerApi.listJobs.mockResolvedValue([]);
+  availabilityApi.jobs.mockResolvedValue([]);
+  availabilityApi.list.mockResolvedValue([]);
   authApi.me.mockRejectedValue(new ApiError('Please log in', { status: 401 }));
   candidateApi.profile.mockResolvedValue({ user_id: 1, display_name: 'Alice', skills: [] });
   candidateApi.resume.mockResolvedValue({ user_id: 1, resume_text: '' });
@@ -70,4 +78,24 @@ it('offers a retry when the backend is unavailable', async () => {
   await screen.findByRole('heading', { name: '暂时无法连接' });
   fireEvent.click(screen.getByRole('button', { name: '重新连接' }));
   await waitFor(() => expect(screen.getByRole('heading', { name: '你好，Alice' })).toBeInTheDocument());
+});
+
+it('integrates employer account controls, company/jobs and availability and refreshes the slot job picker after publishing', async () => {
+  authApi.me.mockResolvedValue({ ...user, role: 'Employer' });
+  authApi.logout.mockResolvedValue({ message: 'Logged out.' });
+  employerApi.createJob.mockResolvedValue({ id: 88, title: 'Integrated role', description: 'Build services', required_skills: ['Python'] });
+  render(<App />);
+  await screen.findByLabelText('岗位标题');
+  await screen.findByText(/你还没有岗位/);
+  expect(screen.getAllByRole('heading', { name: '你好，Alice' })).toHaveLength(1);
+  expect(screen.getByRole('heading', { name: '面试时段', exact: true })).toBeVisible();
+  fireEvent.change(screen.getByLabelText('岗位标题'), { target: { value: 'Integrated role' } });
+  fireEvent.change(screen.getByLabelText('岗位描述'), { target: { value: 'Build services' } });
+  availabilityApi.jobs.mockResolvedValue([{ id: 88, title: 'Integrated role' }]);
+  fireEvent.click(screen.getByRole('button', { name: '发布岗位', exact: true }));
+  expect(await screen.findByRole('option', { name: 'Integrated role' })).toHaveValue('88');
+  expect(employerApi.createJob).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
+  expect(await screen.findByRole('heading', { name: '欢迎回来' })).toBeVisible();
+  expect(authApi.logout).toHaveBeenCalledTimes(1);
 });

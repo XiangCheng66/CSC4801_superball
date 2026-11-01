@@ -9,7 +9,7 @@ function errorText(failure) {
   return details || failure.message || '操作失败，请重试。';
 }
 
-export default function AvailabilityPanel({ onLoggedOut }) {
+export default function AvailabilityPanel({ onLoggedOut, revision = 0 }) {
   const [jobs, setJobs] = useState([]);
   const [slots, setSlots] = useState([]);
   const [jobId, setJobId] = useState('');
@@ -48,7 +48,7 @@ export default function AvailabilityPanel({ onLoggedOut }) {
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [attempt, onLoggedOut]);
+  }, [attempt, onLoggedOut, revision]);
 
   function refresh() {
     setLoading(true);

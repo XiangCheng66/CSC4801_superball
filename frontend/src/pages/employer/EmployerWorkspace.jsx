@@ -11,7 +11,7 @@ export function splitSkills(value) {
     .filter((item, index, all) => all.findIndex((other) => other.toLowerCase() === item.toLowerCase()) === index);
 }
 
-export default function EmployerWorkspace({ user, onLoggedOut }) {
+export default function EmployerWorkspace({ user, onLoggedOut, embedded = false, onJobsChanged }) {
   const [attempt, setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -96,6 +96,7 @@ export default function EmployerWorkspace({ user, onLoggedOut }) {
       setJobs((current) => [...current, created]);
       setDraft(EMPTY_JOB);
       setJobResult({ notice: `已发布「${created.title}」。` });
+      onJobsChanged?.();
     } catch (failure) {
       handleFailure(failure, setJobResult);
     } finally {
@@ -117,6 +118,7 @@ export default function EmployerWorkspace({ user, onLoggedOut }) {
       setJobs((current) => current.map((job) => (job.id === updated.id ? updated : job)));
       setEditing(null);
       setJobResult({ notice: `已更新「${updated.title}」。` });
+      onJobsChanged?.();
     } catch (failure) {
       handleFailure(failure, setJobResult);
     } finally {
@@ -133,6 +135,7 @@ export default function EmployerWorkspace({ user, onLoggedOut }) {
       setJobs((current) => current.filter((row) => row.id !== job.id));
       if (editing?.id === job.id) setEditing(null);
       setJobResult({ notice: `已删除「${job.title}」。` });
+      onJobsChanged?.();
     } catch (failure) {
       handleFailure(failure, setJobResult);
     } finally {
@@ -159,9 +162,9 @@ export default function EmployerWorkspace({ user, onLoggedOut }) {
   }
 
   return (
-    <section className="auth-card account-card" aria-labelledby="employer-title">
-      <span className="role-badge">雇主 · {user.role}</span>
-      <h2 id="employer-title">你好，{user.display_name || user.username}</h2>
+    <section className="auth-card employer-workspace" aria-labelledby="employer-title">
+      {!embedded && <span className="role-badge">雇主 · {user.role}</span>}
+      <h2 id="employer-title">{embedded ? '公司与岗位' : `你好，${user.display_name || user.username}`}</h2>
       <p className="muted">招聘工作台：维护公司资料与岗位，求职者会看到它们。</p>
 
       <form onSubmit={saveCompany} aria-labelledby="company-heading">

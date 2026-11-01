@@ -48,7 +48,8 @@ test('mobile management is usable and employers cannot read each other’s slots
   expect(slots.length).toBeGreaterThan(0);
   await page.getByRole('button', { name: '退出登录', exact: true }).click();
   await login(page, 'employer2');
-  await expect(page.getByText(/你还没有岗位/)).toBeVisible();
+  await expect(page.getByLabel('所属岗位').getByRole('option', { name: '[DEMO-A2] Generalist', exact: true })).toHaveCount(1);
+  await expect(page.getByLabel('所属岗位').getByRole('option', { name: '[Local demo] Interview availability', exact: true })).toHaveCount(0);
   expect((await (await page.request.get('/api/slots/')).json()).data).toEqual([]);
   expect((await page.request.get(`/api/slots/${slots[0].id}/`)).status()).toBe(403);
 });

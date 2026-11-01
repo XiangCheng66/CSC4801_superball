@@ -1,8 +1,8 @@
-# Project Specification — A Day 2 + B/C Day 1
+# Project Specification — A/B/C Day 2
 
 ## Product Scope
 
-已实现账号基础和 A Day 2：求职者资料、持久化技能、私有文字简历及全部岗位推荐；B 的公司/岗位/申请模型与 C 的共享匹配/排序、CI 保留。投递及申请列表、雇主业务 HTTP 接口/页面、时段预约尚未实现。
+已实现账号、求职者资料/私有简历/全部岗位推荐、公司资料、雇主岗位 CRUD 与未来时段管理。三个模块在同一 Django 应用和按角色分配的 React 工作台集成。投递、申请人状态管理、候选人预约与冲突处理仍待实现。
 
 ## Architecture
 
@@ -24,7 +24,7 @@
 - `Job` 通过 `employer` 外键指向 `accounts.User`（不是 CompanyProfile），标题与描述非空；`RequiredSkill` 为子表，同一岗位内技能名不区分大小写唯一，岗位可以没有技能。
 - `Application` 关联 `Job` 与候选人账号，`UNIQUE(job, candidate)` 阻止重复投递；`job` 外键使用 `PROTECT`，使带申请的岗位无法被删除并在接口层映射为 `409`；`status` 由 `CHECK` 约束限定为 `Pending/Interviewing/Rejected/Accepted`。
 
-`candidates.CandidateProfile` 以用户 ID 为主键，一对一关联 User，保存 skills JSON 数组、resume_text 原文及创建/更新时间。显示名仍以 User.display_name 为唯一来源。读取未保存资料的账号返回空技能/简历，不写数据库；首次 PUT 创建资料。资料与简历写操作锁定同一个 User 行，只更新各自字段，资料和显示名在同一事务提交。InterviewSlot/Booking 仍由 C 后续建立。
+`candidates.CandidateProfile` 以 User ID 为主键，保存技能 JSON、私有 resume_text 与时间戳，显示名仍在 User。旧账号 GET 返回空资料，首次 PUT 创建记录；两写接口锁 User 并只更新各自字段。`scheduling.InterviewSlot` 关联 Job（PROTECT），数据库 CHECK 限制恰好 30 分钟；所有者由 job.employer 派生。最小 Booking 的 slot/application 分别 OneToOne+PROTECT，仅实现存储和保护，完整预约服务尚未实现。
 
 ## Authentication and Authorization
 
@@ -55,6 +55,12 @@
 | GET/PUT | `/api/candidate/resume/` | 本人私有简历原文 |
 | GET/PUT | `/api/candidate/resumes/<user_id>/` | 仅本人可访问的显式 ID 别名 |
 | GET | `/api/candidate/recommendations/` | 全部岗位与共享匹配排序 |
+| GET/PUT | `/api/employer/company/` | 本人公司资料；首次 GET 为 404，PUT 新建 201/更新 200 |
+| GET/POST | `/api/employer/jobs/` | 本人岗位列表/创建 |
+| GET/PATCH/DELETE | `/api/employer/jobs/<id>/` | 所有权、部分更新、关联申请或时段时删除 409 |
+| GET/POST | `/api/slots/` | 本人时段列表/未来 30 分钟创建 |
+| GET | `/api/slots/jobs/` | 本人岗位选项 |
+| GET/DELETE | `/api/slots/<id>/` | 本人时段；已预约或已开始不能删除 |
 
 字段与严格输入校验见 [CANDIDATE_CONTRACT.md](docs/CANDIDATE_CONTRACT.md)。所有求职者接口先检查认证/角色，ID 别名再查用户和所有权，分别返回 401/403/404；简历仅在本人简历接口返回。资料、公开账号和推荐均不包含简历。
 
@@ -64,7 +70,7 @@
 
 响应式账号入口含登录和注册切换。注册可选择两种角色，成功后显示服务端返回的账号信息；账号首页可刷新数据库账号信息、验证角色权限、退出。页面重新加载会通过 `/api/auth/me/` 恢复会话。字段校验与网络失败有可读提示。
 
-React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 登录后进入工作台：保留账号操作，个人资料区分别保存显示名/技能与私有简历，原文可预览；推荐区列出全部岗位、整数分数、公司、技能与可展开描述。资料草稿切换入口时保留，保存技能后重新查询推荐；Employer 保留账号页。手机布局通过浏览器检查。申请和预约页面仍待实现。
+React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作台保留账号操作，提供资料/私有简历与推荐。EmployerDashboard 统一显示账号、B 的公司/岗位和 C 的 AvailabilityPanel；成功修改岗位后通过 revision 自动刷新时段选择项。隔离雇主岗位 CSS，避免覆盖求职者列表。手机布局有浏览器检查。
 
 ## Matching Algorithm and Skill Storage
 
@@ -80,7 +86,7 @@ A 的 RecommendationsView 查询全部实际存在的 Job，预加载雇主公�
 
 ## Interview Scheduling and Booking Transaction
 
-未实现，归 C。后续需要未来 30 分钟时段、完整资格检查、数据库事务/约束、冲突 409 与 `Slot already booked`，并保留状态变化后的已有预约。不能使用进程内检查代替数据库原子性。
+C 已实现雇主时段列表、未来 30 分钟创建、仅本人删除、已预约/已开始删除拒绝与可用筛选。API 接受明确时区、输出 UTC，UI 固定 Asia/Shanghai。创建事务锁 Job，删除锁 InterviewSlot；真实时段使 B 的岗位删除返回 409。Booking 目前仅提供存储和约束；FP-SCHED-2/3 的完整资格、预约入口与原子竞争仍待实现。
 
 ## Security Controls
 
@@ -96,9 +102,9 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 ## Design Decisions and Limitations
 
-当前完成 A Day 2 与 B/C Day 1；认证、资料和推荐均有实际接口/页面，但不能由此推断未来申请、雇主操作与预约授权已实现。其余 9 项业务模板仍 skipped。
+当前整合 A/B/C Day 2，并补跨模块发布岗位→推荐→时段→删除保护测试。剩余 5 项占位属于投递/申请人及候选人预约/竞争。各分支交接为历史状态，当前情况以本文与集成记录为准。
 
-数据库时刻采用 UTC（USE_TZ=True），预约展示时区待 C 明确。A Day 2 构建和验证记录见 docs/A_DAY2_HANDOFF.md；业务 seed 只更新保留演示记录，不清空其他数据，完整申请/预约重置仍由 B/C 补齐。
+数据库/API 使用 UTC，时段 UI 使用北京时间 Asia/Shanghai。构建与测试见 docs/DAY2_INTEGRATION.md；演示 seed 不清空业务库，完整申请/预约重置待后续实现。
 
 ## Continuous Integration
 

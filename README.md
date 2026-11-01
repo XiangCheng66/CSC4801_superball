@@ -13,7 +13,7 @@
 求职者预约 → 求职者与雇主均能查看预约
 ```
 
-**当前阶段：A Day 2 已接入个人资料、私有文字简历和岗位推荐。** 求职者可编辑显示名和持久化技能、保存/替换仅本人可访问的简历，并查看全部岗位及 C 的统一匹配分数。保留 A/B/C Day 1 的认证、雇主域模型、评分排序和 CI。投递及申请列表、雇主业务 HTTP 接口与页面、面试预约仍待实现，对应 9 个占位测试明确 skipped。课程要求优先于团队规划。
+**当前阶段：A/B/C 的 Day 2 已集成。** A 提供个人资料、私有文字简历和全岗位推荐；B 提供公司资料与岗位 CRUD；C 提供雇主未来 30 分钟时段管理。统一工作台保留账号操作，发布/修改/删除岗位后自动刷新时段选择列表；真实时段会阻止删除其岗位。投递、本人申请列表、申请人状态管理和候选人预约仍待实现，5 项占位明确 skipped。
 
 ## Team Members
 
@@ -30,8 +30,8 @@ A 已由 XiangCheng66 认领；C 职责已认领，成员姓名对应与 B 的�
 | 部分 | 开发基线 | 职责 |
 |---|---|---|
 | 前端 | React（已确定） | 页面、表单、交互与 API 调用 |
-| 后端 | Python + Django 5.2 + Django REST Framework | 已建立认证、求职者资料/简历/推荐 API；雇主与预约接口待补 |
-| 数据库 | PostgreSQL 17 | 已建立账号、求职者资料、公司、岗位、岗位技能和申请迁移；预约约束后续补充 |
+| 后端 | Python + Django 5.2 + Django REST Framework | 认证、求职者资料/推荐、公司/岗位、雇主时段 API；申请/预约接口待补 |
+| 数据库 | PostgreSQL 17 | 账号、资料、公司、岗位、技能、申请、时段及最小 Booking 存储；完整预约服务待补 |
 | 验证 | pytest + pytest-django；Vitest；可选 Playwright | 默认隔离内存测试库，也支持独立 PostgreSQL 测试库 |
 | 交付 | 多阶段 Dockerfile + Compose | 已验证本地干净镜像构建、Python 服务与 PostgreSQL，见 A Day 2 交接 |
 
@@ -41,7 +41,7 @@ React 调用 Python API；后端校验角色、所有权和业务规则后访问
 
 ### 规划目录
 
-下列目录包含已实现模块与后续目标；accounts/common/config/candidates/employers/jobs/applications/matching 已建立，前端已有账号和求职者工作台，employer/scheduling 页面仍待实现。
+下列目录包含已实现模块与后续目标；accounts/common/config/candidates/employers/jobs/applications/matching/scheduling 已建立，前端已有求职者与雇主工作台；候选人申请和预约流程仍待实现。
 
 ```text
 CSC4801_superball/
@@ -173,9 +173,10 @@ docker compose pull db
 docker compose build app
 docker compose up -d
 docker compose exec -T app python manage.py seed_candidate_demo
+docker compose exec -T app python manage.py seed_availability_demo
 ```
 
-访问 `http://127.0.0.1:8000`。本机开发按 INSTALL.md 建立 PostgreSQL、运行迁移和 Day 2 seed，分别启动 Python 后端（8000）与 React 前端（5173）。求职者登录后可切换个人资料和岗位推荐；雇主目前仍显示账号页。
+访问 `http://127.0.0.1:8000`。本机开发按 INSTALL.md 建立 PostgreSQL、运行迁移和 Day 2 seed，分别启动 Python 后端（8000）与 React 前端（5173）。求职者可切换个人资料和岗位推荐；雇主在同一工作台使用账号操作、公司/岗位管理和面试时段管理。
 
 ## Demo Accounts
 
@@ -198,11 +199,11 @@ docker compose exec -T app python manage.py seed_candidate_demo
 python -m pytest tests/unit -v
 ```
 
-`test_auth.py`、`test_employer_domain_models.py`、`test_matching.py`、`test_candidate.py` 及 `test_workflows.py` 中 FP-CAN-1/2 为真实测试，覆盖认证、权限、CSRF、模型约束、私有简历、技能持久化、推荐和 SQL 绑定等。其余 9 项业务模板 skipped；默认使用隔离 SQLite 内存库，PostgreSQL 方式见 INSTALL.md，失败返回非零退出码。
+`test_auth.py`、`test_employer_domain_models.py`、`test_matching.py`、`test_candidate.py` 及 `test_workflows.py` 中 FP-CAN-1/2 为真实测试，覆盖认证、权限、CSRF、模型约束、私有简历、技能持久化、推荐和 SQL 绑定等。其余 5 项业务模板 skipped；默认使用隔离 SQLite 内存库，PostgreSQL 方式见 INSTALL.md，失败返回非零退出码。
 
 前端在 `frontend` 目录执行 `npm test` 和 `npm run build`。可选真实浏览器测试为 `npm run test:e2e`，需先启动本地 PostgreSQL 演示环境和服务。C 已配置 `.github/workflows/ci.yml`，自动执行 PostgreSQL 后端测试、Django/迁移检查、前端测试和构建；实际运行结果见 [GitHub Actions](https://github.com/XiangCheng66/CSC4801_superball/actions)。
 
-A Day 2 的实现与验证记录见 [交接文档](docs/A_DAY2_HANDOFF.md)。Day 1 分支交接中的测试数和 Docker 状态是历史记录，不代表当前提交的验证结果。
+整合实现与验证见 [Day 2 集成记录](docs/DAY2_INTEGRATION.md)。Day 1 分支交接中的测试数和 Docker 状态是历史记录，不代表当前提交的验证结果。
 
 覆盖成功、输入校验、权限和冲突情形，特别检查 `401/403/404`、技能归一化与两端同分排序、越权、SQL 绑定值、XSS 转义及预约冲突。课程只要求单元测试；数据库原子性仍需通过实现和运行环境验证。
 
@@ -219,15 +220,15 @@ A Day 2 的实现与验证记录见 [交接文档](docs/A_DAY2_HANDOFF.md)。Day
 | FP-CAN-1 | A：资料、技能、私有简历已实现 | `backend/candidates/`、`frontend/src/pages/candidate/` | `tests/unit/test_workflows.py::test_fp_can_1_profile_and_private_resume_rules`；`tests/unit/test_candidate.py::test_invalid_profile_input_is_atomic`；`test_other_users_cannot_read_or_replace_private_resources`；`test_missing_owner_has_404_and_own_alias_is_equivalent`；`test_resume_first_save_and_large_raw_text_preserve_other_fields`（后四项同文件） |
 | FP-CAN-2 | A/C：全部岗位、分数和排序已接入页面 | `backend/candidates/views.py`、`backend/matching/`、`frontend/src/pages/candidate/` | `tests/unit/test_workflows.py::test_fp_can_2_recommendations_preserve_fields_and_rank_all_jobs`；`tests/unit/test_candidate.py::test_persisted_skills_feed_shared_matching`；`test_uninitialized_profile_and_company_fallbacks`；`test_resume_never_leaks_or_changes_recommendations`（后两项同文件） |
 | FP-CAN-3 | A/B：申请默认状态与防重复模型约束已实现；接口待补 | `backend/applications/` | `tests/unit/test_employer_domain_models.py::test_fp_can_3_new_application_defaults_to_pending`；`test_fp_can_3_duplicate_application_is_rejected_by_the_database`（同文件）；工作流测试仍 skipped |
-| FP-EMP-1 | B：公司资料模型及约束已实现；接口待补 | `backend/employers/` | `tests/unit/test_employer_domain_models.py::test_fp_emp_1_company_profile_is_one_per_employer`；`test_fp_emp_1_company_name_must_not_be_blank`（同文件）；工作流测试仍 skipped |
-| FP-EMP-2 | B：岗位/技能约束和申请删除保护已实现；接口与时段关联待补 | `backend/jobs/` | `tests/unit/test_employer_domain_models.py::test_fp_emp_2_required_skills_are_case_insensitive_unique_per_job`；`test_fp_emp_2_delete_job_with_applications_is_protected`（同文件）；工作流测试仍 skipped |
+| FP-EMP-1 | B：公司资料模型、API 与页面已实现 | `backend/employers/`、`frontend/src/pages/employer/` | `tests/unit/test_employer_api.py::test_fp_emp_1_employer_creates_and_reads_own_profile`；`test_fp_emp_1_invalid_profile_is_rejected`；`test_fp_emp_1_candidate_and_anonymous_cannot_touch_a_company_profile`（同文件） |
+| FP-EMP-2 | B/C：本人岗位 CRUD，申请与时段删除保护已接通 | `backend/jobs/`、`backend/scheduling/`、雇主页面 | `tests/unit/test_employer_api.py::test_fp_emp_2_partial_update_changes_only_supplied_fields`；`test_fp_emp_2_other_employer_cannot_edit_or_delete`；`test_fp_emp_2_delete_posting_with_applications_returns_409`（同文件）；`tests/unit/test_day2_integration.py::test_employer_job_candidate_matching_and_slot_deletion_guard_work_together` |
 | FP-EMP-3 | B/C：四态模型约束和共享排序已实现；查询/状态权限接口待补 | `backend/applications/`、`backend/matching/` | `tests/unit/test_employer_domain_models.py::test_fp_emp_3_all_four_statuses_are_storable`；`test_fp_emp_3_unknown_status_is_rejected_by_the_database`（同文件）；工作流测试仍 skipped |
 | FP-MATCH-1 | C：共享算法；A：推荐页面和四分数演示已接入；雇主端待补 | `backend/matching/services.py`、`backend/matching/ranking.py` | `tests/unit/test_matching.py::test_fp_match_1_examples_normalization_and_floor`；`test_fp_match_1_both_tie_breakers`；`test_skill_normalization_does_not_mutate_input`；`test_invalid_skill_types_are_not_treated_as_empty`；`test_ranking_preserves_fields_without_mutating_rows`；`test_rankings_support_empty_rows_and_empty_skill_requirements`；`test_rankings_handle_one_shot_skill_and_row_iterables`；`test_resume_text_cannot_change_match_score_or_order`（同文件） |
 | FP-MATCH-2 | 可选 AI 增强 | N/A，当前未计划实现 | N/A；实现后新增数据流说明和具名单元测试 |
-| FP-SCHED-1 | C：未来 30 分钟时段及删除 | `backend/scheduling/` | `tests/unit/test_scheduling.py::test_fp_sched_1_slot_creation_timezones_and_deletion`；`test_fp_sched_1_invalid_slots`（同文件） |
+| FP-SCHED-1 | C：未来 30 分钟时段、时区与删除管理已实现 | `backend/scheduling/`、`frontend/src/pages/scheduling/` | `tests/unit/test_scheduling.py::test_fp_sched_1_slot_creation_timezones_and_deletion`；`test_fp_sched_1_invalid_slots`；`test_foreign_and_missing_objects`；`test_booked_excluded_and_deletion_protected`；`test_database_enforces_duration`（同文件） |
 | FP-SCHED-2 | C：预约资格、可见性、状态变更后保留 | `backend/scheduling/` | `tests/unit/test_scheduling.py::test_fp_sched_2_eligible_booking`；`test_fp_sched_2_ineligible_booking`（同文件）；补充已有预约保留断言 |
 | FP-SCHED-3 | C：数据库原子性与冲突合同 | `backend/scheduling/`、约束/迁移 | `tests/unit/test_scheduling.py::test_fp_sched_3_conflict_contract`；另检查真实数据库原子性 |
-| FP-SEC-1 | 求职者资料/简历边界已验证；申请、雇主和预约仍待补 | `backend/common/permissions.py`、`backend/candidates/views.py` | `tests/unit/test_candidate.py::test_other_users_cannot_read_or_replace_private_resources`；`test_candidate_endpoints_check_identity_before_objects`（同文件）；其他模块需继续验证 |
+| FP-SEC-1 | 资料/简历、岗位与时段的对象边界已验证；申请与预约待补 | 公共权限与各 View/service | `test_candidate.py::test_other_users_cannot_read_or_replace_private_resources`；`test_employer_api.py::test_fp_emp_2_other_employer_cannot_edit_or_delete`；`test_scheduling.py::test_foreign_and_missing_objects`（均在 tests/unit） |
 | FP-SEC-2 | 认证与求职者数据访问已验证 | `backend/accounts/models.py`、`backend/candidates/views.py` | `tests/unit/test_auth.py::test_sql_metacharacters_remain_bound_values`；`tests/unit/test_candidate.py::test_profile_and_resume_sql_metacharacters_stay_bound` |
 | FP-SEC-3 | 账号、简历预览与岗位文本已验证；后续页面待补 | `frontend/src/pages/candidate/`、`frontend/src/components/AccountHome.jsx` | `frontend/src/App.test.jsx`：`submits the selected registration role and escapes user-controlled display names`；`CandidateWorkspace.test.jsx`：`preserves raw resume whitespace, escapes its preview and saves independently of profile drafts`；`renders zero-score jobs, empty requirements and escaped job text in server order` |
 | FP-SEC-4 | 全员：秘密、个人数据、测试隔离 | 配置、`.env.example`、测试 fixtures | 仓库检查、隔离测试库和第三方服务替身证据 |
@@ -235,16 +236,19 @@ A Day 2 的实现与验证记录见 [交接文档](docs/A_DAY2_HANDOFF.md)。Day
 | FP-DOC-1 | A 牵头：安装可复现 | `INSTALL.md`、`Dockerfile` | 由未搭建环境的成员按文档完成干净安装 |
 | FP-DOC-2 | B 牵头：完整 README 与映射 | `README.md` | 逐项核对概览、架构、账号、测试、文档和全部需求映射 |
 | FP-DOC-3 | 账号、技能和四分数演示已有；完整业务重置待补 | `backend/candidates/management/commands/seed_candidate_demo.py` | `tests/unit/test_candidate.py::test_candidate_demo_is_repeatable_preserves_other_data_and_covers_four_scores`；申请状态和竞争时段仍待补 |
-| FP-TEST-1 | 认证、雇主模型、匹配、FP-CAN-1/2 已验证 | `tests/unit/`、`.github/workflows/ci.yml` | 完整后端测试与前端测试/构建接入 CI；剩余 9 项业务模板明确 skipped |
+| FP-TEST-1 | 账号、资料/推荐、公司/岗位与雇主时段已有真实测试 | `tests/unit/`、前端测试、CI | 完整测试命令包含三人 Day 2；新增跨模块 API 与浏览器回归。剩余 5 项工作流占位 skipped |
 | FP-SUB-1 | 全员：确切 main commit 与完整 Docker 环境 | Git、`Dockerfile`、`INSTALL.md` | 在提交 commit 验证构建、依赖启动、迁移、seed、测试与 UI |
 
 ## Document Index
 
 | 文档 | 用途 | 当前状态 |
 |---|---|---|
-| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | A Day 2 与 B/C Day 1 |
+| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | A/B/C Day 2 已集成 |
 | [SPEC.md](SPEC.md) | 架构、模型、权限、API、匹配、预约事务与安全设计 | 认证、求职者资料/推荐、雇主模型与 CI 已记录 |
 | [INSTALL.md](INSTALL.md) | 精确安装、启动、迁移、seed、测试和 Docker 指令 | 已提供基础运行方式 |
+| [Day 2 集成记录](docs/DAY2_INTEGRATION.md) | 三分支来源、集成调整和验证 | 当前集成状态 |
+| [B 第二天交接](docs/B_DAY2_HANDOFF.md) / [C 第二天交接](docs/C_DAY2_HANDOFF.md) | 各分支独立交付与历史证据 | 已保留 |
+| [时段契约](docs/SCHEDULING_CONTRACT.md) | UTC/北京时间、所有权和预约保护 | 已实现雇主管理 |
 | [公共 API 契约](docs/API_CONTRACT.md) | 会话、CSRF、JSON、错误码和模块接入示例 | 已落地 |
 | [A 第一天交接](docs/DAY1_HANDOFF.md) | 完成范围、验证证据、B/C 接入与后续工作 | 已提供 |
 | [A 第二天交接](docs/A_DAY2_HANDOFF.md) | 资料/简历/推荐、迁移、验证与后续接入 | 已提供 |
@@ -256,7 +260,7 @@ A Day 2 的实现与验证记录见 [交接文档](docs/A_DAY2_HANDOFF.md)。Day
 
 ## Known Limitations
 
-- 已完成账号基础、求职者资料/私有简历/岗位推荐、雇主域模型和共享匹配；投递及本人申请列表、雇主业务 API/页面、面试预约仍待实现。
-- Docker 构建与验证结果见 A Day 2 交接及 PR；CI 本身只执行测试与前端构建，不替代 Docker 验证。
-- `seed_candidate_demo` 覆盖资料与四种匹配分数，不是完整数据库重置；申请状态和竞争时段数据仍待补。
+- 已完成账号、资料/私有简历/推荐、公司/岗位管理与雇主时段管理；投递/申请人状态、候选人预约与竞争处理仍待实现。
+- 当前整合版本的构建与验证见 Day 2 集成记录；CI 执行后端测试、前端测试/构建，本地另验 Docker 与浏览器。
+- 顺序运行 seed_candidate_demo 与 seed_availability_demo 可演示推荐和时段；它们不清空业务库，不是完整申请/预约重置。
 - 公共认证、求职者接口、雇主模型和匹配契约已确定；远程验证结果见 Actions。后续业务需继续复用授权与公开字段白名单。

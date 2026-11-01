@@ -22,9 +22,8 @@ test('employer maintains the company profile and job postings', async ({ page })
   await page.getByLabel('技能要求（逗号分隔，可留空）').fill('Python, SQL, python');
   await page.getByRole('button', { name: '发布岗位' }).click();
   await expect(page.getByText(`已发布「${title}」。`)).toBeVisible();
-  await expect(page.getByText('技能：Python、SQL')).toBeVisible();
-
   const row = page.locator('li', { hasText: title });
+  await expect(row.getByText('技能：Python、SQL')).toBeVisible();
   await row.getByRole('button', { name: '编辑' }).click();
   await page.getByLabel('编辑岗位标题').fill(renamed);
   await page.getByLabel('编辑技能要求').fill('Go');
