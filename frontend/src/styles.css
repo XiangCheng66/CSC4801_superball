@@ -43,6 +43,15 @@ input:focus, select:focus { border-color: #7e9e50; box-shadow: 0 0 0 3px #adc66d
 .account-details div { display: flex; gap: 20px; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #e6e8df; font-size: 13px; }
 dt { color: #7b8377; flex-shrink: 0; } dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
 .actions { display: grid; gap: 10px; margin-top: 24px; }
+.workspace-layout { grid-template-columns: 1fr; justify-items: center; }
+.workspace-layout .auth-card { width: min(720px, 100%); }
+.job-list { list-style: none; margin: 18px 0 0; padding: 0; }
+.job-list > li { border-top: 1px solid #e6e8df; padding: 20px 0 0; margin-bottom: 20px; }
+.job-list > li:first-child { border-top: none; padding-top: 0; }
+.row-actions { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.row-actions .secondary { padding: 8px 16px; }
+h3 { font-size: 16px; font-weight: 650; margin: 30px 0 0; }
+h3:first-of-type { margin-top: 0; }
 .site-footer { min-height: 79px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #dcded2; gap: 15px; }
 .workspace-layout { display: block; padding: 40px 0; }
 .candidate-workspace { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 28px; align-items: start; }

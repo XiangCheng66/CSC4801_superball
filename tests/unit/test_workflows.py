@@ -49,12 +49,9 @@ def test_fp_can_3_pending_duplicate_and_application_owner():
     pytest.skip("A/B: application implementation pending")
 
 
-def test_fp_emp_1_company_profile():
-    pytest.skip("B: company profile implementation pending")
-
-
-def test_fp_emp_2_job_validation_and_deletion():
-    pytest.skip("B: job management implementation pending")
+# FP-EMP-1 and FP-EMP-2 are covered by real HTTP tests in
+# tests/unit/test_employer_api.py; their skip placeholders were removed once
+# the company and job endpoints landed.
 
 
 def test_fp_emp_3_applicant_fields_order_status_and_role():

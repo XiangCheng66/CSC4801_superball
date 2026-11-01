@@ -59,6 +59,29 @@ await apiRequest('/api/auth/logout/', { method: 'POST' });
 | GET | `/api/candidate/session/` | Candidate | 200；当前账号，仅验证身份基础 |
 | GET | `/api/employer/session/` | Employer | 200；当前账号，仅验证身份基础 |
 
+## 雇主接口（B / Day 2）
+
+实现见 `backend/employers/`、`backend/jobs/`；页面见 `frontend/src/pages/employer/`。
+
+| 方法 | 路径 | 权限 / CSRF | 成功结果 |
+|---|---|---|---|
+| GET | `/api/employer/company/` | Employer | 200；本人公司资料；未创建返回 404 `not_found` |
+| PUT | `/api/employer/company/` | Employer + CSRF | 201 新建 / 200 覆盖；字段 `company_name`、`description` |
+| GET | `/api/employer/jobs/` | Employer | 200；数组，仅本人岗位 |
+| POST | `/api/employer/jobs/` | Employer + CSRF | 201；字段 `title`、`description`、`required_skills?` |
+| GET | `/api/employer/jobs/<id>/` | Employer | 200；本人岗位 |
+| PATCH | `/api/employer/jobs/<id>/` | Employer + CSRF | 200；只改传入字段，`required_skills` 传则整体替换 |
+| DELETE | `/api/employer/jobs/<id>/` | Employer + CSRF | 200 `{deleted: true, id}` |
+
+岗位响应字段：`id`、`title`、`description`、`required_skills`（字符串数组）、`created_at`、`updated_at`。`employer` 只取自会话，客户端传入会因未知字段返回 400。
+
+| HTTP 状态 | code | 含义 |
+|---|---|---|
+| 400 | `validation_error` | 标题或描述为空/纯空白、技能不是数组、含未知字段 |
+| 403 | `permission_denied` | 他人岗位，或无 Employer 角色 |
+| 404 | `not_found` | 公司资料未创建，或岗位不存在 |
+| 409 | `job_has_dependents` | 岗位仍有申请或面试时段，删除被拒且数据不变 |
+
 注册字段：`username`（3～150 字符）、`email`、`password`（8～128 字符且通过 Django 密码校验）、`role`（严格为 `Candidate` 或 `Employer`）、可选 `display_name`（最多 100 字符，空值使用用户名）。未知字段拒绝。用户名与邮箱在数据库中不区分大小写唯一，邮箱保存为小写。
 
 登录字段仅为 `username`、`password`；用户名不区分大小写。公开账号字段严格限定为 `id/username/email/display_name/role`，不返回密码哈希、会话 ID 或内部权限标志。
