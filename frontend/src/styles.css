@@ -46,3 +46,26 @@ dt { color: #7b8377; flex-shrink: 0; } dd { margin: 0; overflow-wrap: anywhere; 
 .site-footer { min-height: 79px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #dcded2; gap: 15px; }
 @media (max-width: 850px) { .shell { padding: 0 24px; } main { gap: 35px; padding: 45px 0; } .auth-card { padding: 26px; } .intro-note { margin-top: 35px; } }
 @media (max-width: 650px) { .site-header { min-height: 85px; } .brand { font-size: 25px; } .course-label { font-size: 10px; } main { grid-template-columns: 1fr; gap: 30px; padding: 35px 0; } h1 { font-size: 34px; } .eyebrow { margin-bottom: 18px; font-size: 9px; } .feature-list, .intro-note { display: none; } .intro-copy { margin-bottom: 0; } .site-footer { flex-direction: column; align-items: flex-start; justify-content: center; padding: 20px 0; font-size: 10px; } }
+
+.availability-panel { grid-column: 1 / -1; }
+.availability-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+.availability-header .eyebrow { margin-bottom: 12px; }
+.availability-header .muted { line-height: 1.8; }
+.availability-header > button { flex-shrink: 0; }
+.availability-layout { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(0, 1.7fr); gap: 40px; margin-top: 12px; }
+.availability-panel h3 { font-size: 15px; font-weight: 650; margin: 0 0 20px; }
+.availability-create { padding-right: 32px; border-right: 1px solid #e2e5d9; }
+.availability-count { font-size: 11px; font-weight: 400; color: #687365; margin-left: 10px; }
+.availability-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.availability-slot { padding: 18px 20px; background: #f6f7f0; border: 1px solid #e2e5d9; border-radius: 10px; min-width: 0; }
+.availability-slot-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.availability-slot-heading strong { font-size: 14px; overflow-wrap: anywhere; }
+.availability-badge { font-size: 10px; white-space: nowrap; border-radius: 20px; padding: 4px 9px; background: #e7e9e2; color: #657061; }
+.availability-badge.available { background: #e2edc8; color: #385a21; }
+.availability-time { font-size: 12px; line-height: 1.8; color: #596b5c; display: flex; gap: 6px; flex-wrap: wrap; }
+.availability-delete { padding: 0; text-decoration: underline; text-underline-offset: 3px; font-size: 11px; }
+.availability-confirm { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+.availability-confirm .secondary { padding: 7px 12px; }
+.availability-empty { padding: 24px; margin: 0; background: #f6f7f0; border: 1px dashed #cdd7bd; border-radius: 10px; font-size: 13px; line-height: 1.8; color: #687365; }
+@media (max-width: 850px) { .availability-layout { gap: 24px; } .availability-create { padding-right: 24px; } }
+@media (max-width: 650px) { .availability-layout { grid-template-columns: 1fr; gap: 30px; } .availability-create { padding-right: 0; border-right: 0; padding-bottom: 28px; border-bottom: 1px solid #e2e5d9; } .availability-header { flex-direction: column; gap: 0; margin-bottom: 24px; } .availability-slot { padding: 16px; } .availability-panel .eyebrow { font-size: 10px; } }

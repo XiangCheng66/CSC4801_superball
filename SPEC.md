@@ -1,8 +1,8 @@
-# Project Specification — A + B + C / Day 1
+# Project Specification — A/B/C Day 1 + C Day 2
 
 ## Product Scope
 
-已实现项目骨架、两种角色的注册/登录/退出、当前账号查询、角色/所有权校验基础、公共请求/错误契约、数据库健康检查和认证演示账号。B 已提供公司、岗位、岗位技能与申请模型、数据库约束和迁移；C 已提供共享匹配分数与两端排序服务、真实单元测试和 CI 配置。候选人技能与私有简历、雇主域 HTTP 接口与页面、推荐页面接入与面试业务尚未实现。
+已实现项目骨架、两种角色的注册/登录/退出、当前账号查询、角色/所有权校验基础、公共请求/错误契约、数据库健康检查和认证演示账号。B 已提供公司、岗位、岗位技能与申请模型、数据库约束和迁移；C 已提供共享匹配服务、CI，以及 Day 2 雇主时段管理模型、API、React 页面和真实测试。候选人技能与私有简历、岗位/申请 HTTP 接口与页面、推荐页面接入与候选人预约业务尚未集成。
 
 ## Architecture
 
@@ -24,7 +24,7 @@
 - `Job` 通过 `employer` 外键指向 `accounts.User`（不是 CompanyProfile），标题与描述非空；`RequiredSkill` 为子表，同一岗位内技能名不区分大小写唯一，岗位可以没有技能。
 - `Application` 关联 `Job` 与候选人账号，`UNIQUE(job, candidate)` 阻止重复投递；`job` 外键使用 `PROTECT`，使带申请的岗位无法被删除并在接口层映射为 `409`；`status` 由 `CHECK` 约束限定为 `Pending/Interviewing/Rejected/Accepted`。
 
-`CandidateProfile/InterviewSlot/Booking` 由 A/C 建立，其关系和迁移在实现时补充此处。
+`CandidateProfile` 待 A 分支合入。C 已建立 `InterviewSlot`（Job PROTECT 外键、开始/结束时间、30 分钟 CHECK）和最小 `Booking`（slot/application 各自 OneToOne + PROTECT）。时段所有者从 job.employer 派生；关联时段的岗位不可删除。详见 [时段契约](docs/SCHEDULING_CONTRACT.md)。
 
 ## Authentication and Authorization
 
@@ -57,7 +57,7 @@
 
 响应式账号入口含登录和注册切换。注册可选择两种角色，成功后显示服务端返回的账号信息；账号首页可刷新数据库账号信息、验证角色权限、退出。页面重新加载会通过 `/api/auth/me/` 恢复会话。字段校验与网络失败有可读提示。
 
-React 使用文本插值显示用户输入，不使用 `dangerouslySetInnerHTML`。手机布局有实际浏览器无横向溢出检查。尚无资料编辑、岗位、申请和预约页面。
+React 使用文本插值显示用户输入，不使用 `dangerouslySetInnerHTML`。手机布局有实际浏览器无横向溢出检查。雇主账号下已挂载 C 的时段管理组件：选择自己的岗位、创建 30 分钟时段、刷新列表、确认删除。已预约与历史时段保留展示且不可删除，网络错误、401 和 409 有对应处理。尚无资料编辑、岗位 CRUD、申请和候选人预约页面。
 
 ## Matching Algorithm and Skill Storage
 
@@ -73,7 +73,9 @@ React 使用文本插值显示用户输入，不使用 `dangerouslySetInnerHTML`
 
 ## Interview Scheduling and Booking Transaction
 
-未实现，归 C。后续需要未来 30 分钟时段、完整资格检查、数据库事务/约束、冲突 409 与 `Slot already booked`，并保留状态变化后的已有预约。不能使用进程内检查代替数据库原子性。
+C 已实现 FP-SCHED-1：未来、恰好 30 分钟、明确时区、雇主角色与 Job 所有权、已预约排除和删除保护。API 为 `/api/slots/`、`/api/slots/jobs/`、`/api/slots/<id>/`，字段和错误见 [时段契约](docs/SCHEDULING_CONTRACT.md)。创建与删除分别在事务中锁定岗位和时段；Booking 的唯一关联保证存储不重复并保留状态变化后的预约。
+
+FP-SCHED-2/3 尚未完成：需提供候选人预约资格检查、双方详情、预约事务与 `409` / `Slot already booked` 合同。已有存储约束不能代替完整原子预约服务。
 
 ## Security Controls
 
@@ -89,9 +91,9 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 ## Design Decisions and Limitations
 
-当前完成 A 的第一天基础、B 的雇主域模型与 C 的共享匹配服务。认证/公共权限及模型约束不能证明未来岗位、简历或预约的 HTTP 授权已经实现；各模块仍须补充对象边界和具名测试。
+当前完成 A 的第一天基础、B 的雇主域模型、C 的共享匹配与 Day 2 雇主时段管理。认证/公共权限及模型约束不能证明未来岗位、简历或预约的 HTTP 授权已经实现；各模块仍须补充对象边界和具名测试。
 
-数据库时刻采用 UTC（`USE_TZ=True`），预约展示时区由 C 在实现时明确。Docker/Compose 文件已建立，完整应用镜像构建证据仍待补充；完整业务 seed 由 B/C 后续完成。
+数据库时刻采用 UTC（`USE_TZ=True`），时段页面明确使用 Asia/Shanghai（北京时间，UTC+8），API 输入要求明确 offset 或 Z，输出 UTC。Docker 应用镜像已在 C Day 2 构建验证，运行记录见交接文档；完整业务 seed 由 B/C 后续完成。
 
 ## Continuous Integration
 

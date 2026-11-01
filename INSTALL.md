@@ -1,6 +1,6 @@
-# Installation Guide — A + C / Day 1
+# Installation Guide — A/B/C Day 1 + C Day 2
 
-当前可运行 React 账号页面、Python 认证 API 和 PostgreSQL 数据库；共享匹配与排序可由后端调用并单独测试。公司、岗位、申请、推荐页面接入与预约仍待实现。本指南的 seed 只生成认证演示账号，不是最终项目的完整业务数据集。
+当前可运行 React 账号与雇主时段页面、Python 认证/时段 API 和 PostgreSQL 数据库；共享匹配与排序可由后端调用并单独测试。公司/岗位 CRUD、申请、推荐页面接入与候选人预约仍待集成。本指南提供认证 seed 和可选的时段 seed，不是最终项目的完整业务数据集。
 
 ## Prerequisites and Versions
 
@@ -197,3 +197,25 @@ npm.cmd run test:e2e
 - Node 引擎不兼容：使用 Node 22.12+（22 系列）。若 npm 10 安装出现 `edgesOut` 内部错误，可执行 `npx --yes npm@11 ci`，无需全局改动。
 - 后端直接访问 `/` 返回 `frontend_not_built`：本机开发使用 Vite 的 5173 入口；容器构建会复制并提供前端文件。
 - 端口占用：先确认运行中的本地实例，再调整端口与对应代理/CSRF 配置。
+
+## C Day 2：运行时段管理
+
+在仓库根目录、已配置的本地演示数据库上执行（Windows 用 `.\.venv\Scripts\python.exe` 替换 Python 路径）：
+
+```bash
+.venv/bin/python manage.py migrate --noinput
+.venv/bin/python manage.py seed_auth_demo
+.venv/bin/python manage.py seed_availability_demo
+```
+
+Compose 已启动时可执行 `docker compose exec app python manage.py seed_availability_demo`（需先有认证演示账号）。时段 seed 创建 employer1 的演示岗位，以及北京时间明天 09:00 和 09:30 的时段；同一天重复执行幂等，不清空已有记录。它不是完整业务 reset/seed。
+
+按前文启动前后端后，以 `employer1 / LocalDemo!2026` 登录，账号下方显示“面试时段”。选择岗位和未来开始时间，结束时间自动加 30 分钟；创建后刷新页面验证持久化，再确认删除。`employer2` 看不到 employer1 的岗位/时段；Candidate 不显示管理入口。统一北京时间，API 使用 UTC。已预约保护通过真实 Booking 测试 fixture 验证，候选人预约入口尚未实现。
+
+单独运行后端时段测试：
+
+```bash
+.venv/bin/python -m pytest tests/unit/test_scheduling.py -q -ra
+```
+
+`npm test` 自动包含时段页面测试。浏览器验证先执行上述 seed，再在 frontend 运行 `npm run test:e2e`；时段案例会创建并删除一个未来时段。仅使用可重置的本地演示库。验证范围与结果见 [C 第二天交接](docs/C_DAY2_HANDOFF.md)。

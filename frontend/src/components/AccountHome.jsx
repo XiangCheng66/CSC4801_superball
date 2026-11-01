@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { authApi } from '../api/auth';
+import AvailabilityPanel from '../pages/scheduling/AvailabilityPanel';
 
 export default function AccountHome({ user, onUserChanged, onLoggedOut }) {
   const [busy, setBusy] = useState(false);
@@ -18,6 +19,7 @@ export default function AccountHome({ user, onUserChanged, onLoggedOut }) {
   }
 
   return (
+    <>
     <section className="auth-card account-card" aria-labelledby="account-title">
       <span className="role-badge">{user.role === 'Candidate' ? '求职者' : '雇主'} · {user.role}</span>
       <h2 id="account-title">你好，{user.display_name || user.username}</h2>
@@ -32,5 +34,7 @@ export default function AccountHome({ user, onUserChanged, onLoggedOut }) {
         <button className="text-button" disabled={busy} onClick={() => action(async () => { await authApi.logout(); onLoggedOut(); })}>退出登录</button>
       </div>
     </section>
+    {user.role === 'Employer' && <AvailabilityPanel onLoggedOut={onLoggedOut} />}
+    </>
   );
 }

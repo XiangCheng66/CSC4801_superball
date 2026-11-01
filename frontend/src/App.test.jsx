@@ -3,12 +3,16 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import App from './App';
 import { authApi } from './api/auth';
 import { ApiError } from './api/client';
+import { availabilityApi } from './api/scheduling';
 
 vi.mock('./api/auth', () => ({ authApi: { me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn(), workspace: vi.fn() } }));
+vi.mock('./api/scheduling', () => ({ availabilityApi: { jobs: vi.fn(), list: vi.fn() } }));
 const user = { id: 1, username: 'alice', email: 'alice@example.test', display_name: 'Alice', role: 'Candidate' };
 
 beforeEach(() => {
   vi.resetAllMocks();
+  availabilityApi.jobs.mockResolvedValue([]);
+  availabilityApi.list.mockResolvedValue([]);
   authApi.me.mockRejectedValue(new ApiError('Please log in', { status: 401 }));
 });
 
@@ -21,6 +25,7 @@ it('shows login for an anonymous visitor and logs in with submitted credentials'
   fireEvent.click(screen.getByRole('button', { name: '登录账号' }));
   await screen.findByRole('heading', { name: '你好，Alice' });
   expect(authApi.login).toHaveBeenCalledWith({ username: 'alice', password: 'secret' });
+  expect(availabilityApi.list).not.toHaveBeenCalled();
 });
 
 it('submits the selected registration role and escapes user-controlled display names', async () => {
@@ -36,6 +41,7 @@ it('submits the selected registration role and escapes user-controlled display n
   await screen.findByRole('heading', { name: '你好，<script>alert(1)</script>' });
   expect(authApi.register).toHaveBeenCalledWith(expect.objectContaining({ role: 'Employer' }));
   expect(document.querySelector('script')).toBeNull();
+  expect(await screen.findByRole('heading', { name: '面试时段' })).toBeInTheDocument();
 });
 
 it('restores a stored session, reads current user data and logs out', async () => {
