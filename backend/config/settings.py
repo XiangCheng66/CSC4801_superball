@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "employers",
     "jobs",
     "applications",
+    "scheduling",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
