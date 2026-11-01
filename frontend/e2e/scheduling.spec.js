@@ -14,7 +14,11 @@ async function login(page, username) {
 
 test('employer creates, reloads and deletes a persisted half-hour slot', async ({ page }) => {
   await login(page, 'employer1');
-  await page.getByLabel('所属岗位').selectOption({ label: '[Local demo] Interview availability' });
+  // Pick a real posting by id instead of a hard-coded title so the suite does
+  // not depend on the exact demo wording.
+  const { data: jobs } = await (await page.request.get('/api/employer/jobs/')).json();
+  const availability = jobs.find((job) => job.title.includes('Interview availability')) ?? jobs[0];
+  await page.getByLabel('所属岗位').selectOption(String(availability.id));
   const start = new Date(Date.now() + 7 * 24 * 60 * 60_000);
   start.setUTCSeconds(0, 0);
   await page.getByLabel('开始时间（北京时间）').fill(beijingInput(start));
@@ -48,8 +52,12 @@ test('mobile management is usable and employers cannot read each other’s slots
   expect(slots.length).toBeGreaterThan(0);
   await page.getByRole('button', { name: '退出登录', exact: true }).click();
   await login(page, 'employer2');
-  await expect(page.getByLabel('所属岗位').getByRole('option', { name: '[DEMO-A2] Generalist', exact: true })).toHaveCount(1);
-  await expect(page.getByLabel('所属岗位').getByRole('option', { name: '[Local demo] Interview availability', exact: true })).toHaveCount(0);
+  // employer2 only sees its own postings; compare against the API instead of
+  // hard-coding titles from another employer.
+  const { data: ownJobs } = await (await page.request.get('/api/employer/jobs/')).json();
+  expect(ownJobs.length).toBeGreaterThan(0);
+  const options = await page.getByLabel('所属岗位').getByRole('option').allTextContents();
+  expect(options.slice().sort()).toEqual(ownJobs.map((job) => job.title).slice().sort());
   expect((await (await page.request.get('/api/slots/')).json()).data).toEqual([]);
   expect((await page.request.get(`/api/slots/${slots[0].id}/`)).status()).toBe(403);
 });

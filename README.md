@@ -172,24 +172,25 @@ cp .env.example .env
 docker compose pull db
 docker compose build app
 docker compose up -d
-docker compose exec -T app python manage.py seed_candidate_demo
-docker compose exec -T app python manage.py seed_availability_demo
+docker compose exec -T app python manage.py seed_demo
 ```
 
 访问 `http://127.0.0.1:8000`。本机开发按 INSTALL.md 建立 PostgreSQL、运行迁移和 Day 2 seed，分别启动 Python 后端（8000）与 React 前端（5173）。求职者可切换个人资料和岗位推荐；雇主在同一工作台使用账号操作、公司/岗位管理和面试时段管理。
 
 ## Demo Accounts
 
-执行 `python manage.py seed_candidate_demo` 后可使用以下公开的 **local/demo** 账号：
+执行 `python manage.py seed_demo` 后可使用以下公开的 **local/demo** 账号：
 
 | 用户名 | 身份 | 密码 |
 |---|---|---|
 | `candidate1`、`candidate2`、`candidate3` | Candidate | `LocalDemo!2026` |
 | `employer1`、`employer2` | Employer | `LocalDemo!2026` |
 
-邮箱为 `<username>@example.test`。`seed_auth_demo` 仍只维护原四个账号；`seed_candidate_demo` 调用它，再维护第三个求职者、技能、两份演示公司资料和两个 `[DEMO-A2]` 岗位。三个求职者技能为 Python/SQL、Python、Rust，对要求 Python/SQL 的岗位得分 100/50/0，对无要求的岗位均为 100。重复执行保持演示岗位 ID、私有简历及其他用户/岗位，不清空申请或预约；保留演示账号的密码和显示名会恢复为公开演示值。
+邮箱为 `<username>@example.test`。
 
-最终完整重置/seed 命令仍待 B/C 补齐：当前命令是资料与推荐演示，不满足四种申请状态、预约竞争数据等完整 FP-DOC-3 要求。
+`seed_demo` 是唯一的重置入口：按外键顺序清空预约、时段、申请、岗位、公司资料、候选人资料与 `e2e_` 临时账号，然后重建固定数据集（5 个账号、2 家公司、4 个岗位、5 条覆盖四种状态的申请、2 个开放时段）。加 `--no-reset` 只做增量补齐。
+
+三个求职者技能为 Python/SQL、Python、Rust，对要求 Python/SQL 的 `[DEMO-A2] Backend Developer` 得分 100/50/0，对空要求岗位均为 100。candidate1 与 candidate3 的申请均为 `Interviewing` 且同属 employer1，可争抢同一时段。岗位标题是 e2e 的定位依据，改动需同步 Playwright。
 
 ## Running Unit Tests
 
@@ -235,7 +236,7 @@ python -m pytest tests/unit -v
 | FP-PROC-1 | 全员：规格与实际代码一致 | `SPEC.md` | 逐模块审查规格，确认成员能够解释与修改代码 |
 | FP-DOC-1 | A 牵头：安装可复现 | `INSTALL.md`、`Dockerfile` | 由未搭建环境的成员按文档完成干净安装 |
 | FP-DOC-2 | B 牵头：完整 README 与映射 | `README.md` | 逐项核对概览、架构、账号、测试、文档和全部需求映射 |
-| FP-DOC-3 | 账号、技能和四分数演示已有；完整业务重置待补 | `backend/candidates/management/commands/seed_candidate_demo.py` | `tests/unit/test_candidate.py::test_candidate_demo_is_repeatable_preserves_other_data_and_covers_four_scores`；申请状态和竞争时段仍待补 |
+| FP-DOC-3 | B：一条命令重置并灌入完整演示数据 | `backend/common/management/commands/seed_demo.py` | `tests/unit/test_seed_demo.py::test_seed_demo_builds_the_documented_dataset`；`test_seed_demo_reproduces_all_four_match_examples`；`test_seed_demo_supplies_two_interviewing_candidates_for_one_slot`；`test_seed_demo_creates_future_thirty_minute_slots_in_beijing_time`；`test_seed_demo_is_repeatable_and_resets_business_rows`（同文件） |
 | FP-TEST-1 | 账号、资料/推荐、公司/岗位与雇主时段已有真实测试 | `tests/unit/`、前端测试、CI | 完整测试命令包含三人 Day 2；新增跨模块 API 与浏览器回归。剩余 5 项工作流占位 skipped |
 | FP-SUB-1 | 全员：确切 main commit 与完整 Docker 环境 | Git、`Dockerfile`、`INSTALL.md` | 在提交 commit 验证构建、依赖启动、迁移、seed、测试与 UI |
 
@@ -262,5 +263,5 @@ python -m pytest tests/unit -v
 
 - 已完成账号、资料/私有简历/推荐、公司/岗位管理与雇主时段管理；投递/申请人状态、候选人预约与竞争处理仍待实现。
 - 当前整合版本的构建与验证见 Day 2 集成记录；CI 执行后端测试、前端测试/构建，本地另验 Docker 与浏览器。
-- 顺序运行 seed_candidate_demo 与 seed_availability_demo 可演示推荐和时段；它们不清空业务库，不是完整申请/预约重置。
+- `python manage.py seed_demo` 一条命令重置并灌入完整演示数据（五个账号、两家公司、四个岗位、四种申请状态、两个可争抢时段）；`seed_auth_demo`、`seed_candidate_demo`、`seed_availability_demo` 为增量命令。
 - 公共认证、求职者接口、雇主模型和匹配契约已确定；远程验证结果见 Actions。后续业务需继续复用授权与公开字段白名单。

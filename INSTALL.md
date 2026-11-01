@@ -41,8 +41,7 @@ macOS/Linux 使用 `cp .env.example .env`。修改 `.env` 的 `DJANGO_SECRET_KEY
 docker compose pull db
 docker compose build app
 docker compose up -d
-docker compose exec -T app python manage.py seed_candidate_demo
-docker compose exec -T app python manage.py seed_availability_demo
+docker compose exec -T app python manage.py seed_demo
 docker compose ps
 ```
 
@@ -55,7 +54,7 @@ docker compose ps
 ```bash
 docker compose logs app
 docker compose exec app python manage.py migrate --noinput
-docker compose exec -T app python manage.py seed_candidate_demo
+docker compose exec -T app python manage.py seed_demo
 docker compose exec -T app python -m pytest tests/unit -q -o cache_dir=/tmp/pytest-cache
 docker compose exec -T -e TEST_DATABASE_ENGINE=postgresql app python -m pytest tests/unit -q -o cache_dir=/tmp/pytest-cache
 docker compose down
@@ -86,7 +85,7 @@ Windows PowerShell：
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe manage.py migrate --noinput
-.\.venv\Scripts\python.exe manage.py seed_candidate_demo
+.\.venv\Scripts\python.exe manage.py seed_demo
 .\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
 ```
 
@@ -96,7 +95,7 @@ macOS/Linux 对应命令：
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python manage.py migrate --noinput
-.venv/bin/python manage.py seed_candidate_demo
+.venv/bin/python manage.py seed_demo
 .venv/bin/python manage.py runserver 127.0.0.1:8000
 ```
 
@@ -123,9 +122,15 @@ PowerShell 执行策略阻止 npm.ps1 时使用 `npm.cmd`。打开 **http://127.
 | `candidate1`、`candidate2`、`candidate3` | Candidate | `LocalDemo!2026` |
 | `employer1`、`employer2` | Employer | `LocalDemo!2026` |
 
-邮箱为 `<username>@example.test`。`seed_auth_demo` 仍维护四个认证账号；`seed_candidate_demo` 复用它并增加 candidate3、三个候选人的技能、两个演示公司和两个 [DEMO-A2] 岗位（Python/SQL 要求和空要求）。两个命令都会恢复保留账号的公开演示密码和显示名；Day 2 命令保留简历、其他用户/岗位及申请/预约，不是清库命令。
+邮箱为 `<username>@example.test`。
 
-candidate1/2/3 的技能分别为 Python+SQL、Python、Rust，对 Python+SQL 岗位得分 100/50/0，对空要求岗位均为 100。完整重置、四种申请状态和预约竞争数据仍待 B/C 补齐。
+`python manage.py seed_demo` 是唯一的完整重置入口：先按外键顺序删除预约、时段、申请、岗位、公司资料、候选人资料与 `e2e_` 前缀的临时账号，再重建固定演示数据集，一条命令满足 FP-DOC-3。`--no-reset` 只做增量补齐，不清库。
+
+数据集包含：5 个账号、2 家公司、4 个岗位（`[Local demo] Interview availability`、`[DEMO-A2] Backend Developer`、`[DEMO-A2] Generalist`、`[Local demo] Data Analyst`）、5 条覆盖 `Pending/Interviewing/Rejected/Accepted` 的申请，以及北京时间明天 09:00、09:30 两个开放时段。
+
+candidate1/2/3 的技能分别为 Python+SQL、Python、Rust，对 `[DEMO-A2] Backend Developer`（要求 Python+SQL）得分 100/50/0，对空要求岗位均为 100。candidate1 与 candidate3 的申请都是 `Interviewing` 且同属 employer1，可争抢同一时段。**岗位标题是浏览器测试的定位依据**，改名要同步 e2e。
+
+`seed_auth_demo`、`seed_candidate_demo`、`seed_availability_demo` 保留为增量命令；日常开发和浏览器测试统一使用 `seed_demo`。
 
 ## Running Unit Tests
 
@@ -172,7 +177,7 @@ npm run build
 
 ## Optional Browser Smoke Test
 
-先 migrate，顺序执行 seed_candidate_demo 与 seed_availability_demo；完整浏览器测试依赖这两组演示数据。启动服务后在 frontend 执行：
+先 `migrate`，再执行 `python manage.py seed_demo`（一条命令重置并灌入全部演示数据）；完整浏览器测试依赖这套数据。启动服务后在 frontend 执行：
 
 ```bash
 npx playwright install chromium
@@ -202,14 +207,13 @@ npm.cmd run test:e2e
 
 ## C Day 2：运行时段管理
 
-在已迁移的演示库顺序执行：
+在已迁移的演示库执行一条命令即可：
 
 ```bash
-python manage.py seed_candidate_demo
-python manage.py seed_availability_demo
+python manage.py seed_demo
 ```
 
-Compose 对应命令为 `docker compose exec -T app python manage.py seed_availability_demo`。时段 seed 为 employer1 的保留岗位添加北京时间明天 09:00、09:30 两个时段，同一天重复执行幂等，不清空历史时段和预约。employer2 有自己的 Generalist 岗位，但看不到 employer1 的岗位/时段。
+Compose 对应命令为 `docker compose exec -T app python manage.py seed_demo`。它在 employer1 的 `[Local demo] Interview availability` 岗位下添加北京时间明天 09:00、09:30 两个时段，并同时重建公司、岗位、申请等演示数据（会清空业务行）。只补时段而不清库时用 `python manage.py seed_availability_demo`。employer2 看不到 employer1 的岗位/时段。
 
 雇主登录后的工作台同时显示公司/岗位和时段。发布、编辑或删除岗位会自动刷新时段选择；时段 UI 固定北京时间，API 使用 UTC。有时段的岗位删除返回 409，先删除允许删除的时段后才能删除岗位。候选人预约入口尚未实现。
 
