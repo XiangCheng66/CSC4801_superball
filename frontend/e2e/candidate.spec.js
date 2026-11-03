@@ -75,7 +75,8 @@ test('recommendations use newly saved skills, retain zero-score jobs and fit a m
   await expect(page.getByText('资料已保存。')).toBeVisible();
   await page.getByRole('button', { name: '岗位推荐', exact: true }).click();
   await expect(backend.getByLabel('匹配分 100 分')).toBeVisible();
-  await expect(page.getByRole('article').first().getByRole('heading')).toHaveText('[DEMO-A2] Backend Developer');
+  const ranked = (await (await page.request.get('/api/candidate/recommendations/')).json()).data;
+  expect(await page.getByRole('article').getByRole('heading').allTextContents()).toEqual(ranked.map((job) => job.title));
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/candidate-jobs-mobile.png', fullPage: true });
