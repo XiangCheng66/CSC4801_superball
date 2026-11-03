@@ -114,6 +114,6 @@ summary { cursor: pointer; color: #36593c; font-weight: 600; padding: 7px 0; }
 .application-booking { margin-top: 20px; padding: 14px; background: #f5f6ef; border-radius: 8px; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
 .application-booking h4 { margin: 0 0 8px; }
 .application-booking p { margin: 6px 0; }
-.workspace-tabs { flex-wrap: wrap; }
+.workspace-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 650px) { .application-card .job-heading { flex-direction: column; } }
 @media (max-width: 1000px) { .employer-dashboard { grid-template-columns: minmax(0, 1fr); } .employer-dashboard > .account-card { position: static; } }
