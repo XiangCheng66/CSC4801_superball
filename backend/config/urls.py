@@ -6,6 +6,7 @@ urlpatterns = [
     path("api/health/", HealthView.as_view(), name="health"),
     path("api/", include("accounts.urls")),
     path("api/", include("candidates.urls")),
+    path("api/", include("applications.urls")),
     path("api/employer/jobs/", include("jobs.urls")),
     path("api/employer/", include("employers.urls")),
     path("api/", include("scheduling.urls")),

@@ -45,8 +45,26 @@ def test_fp_can_2_recommendations_preserve_fields_and_rank_all_jobs(candidate_cl
     assert rows[1]["required_skills"] == ["Python", "SQL"]
 
 
-def test_fp_can_3_pending_duplicate_and_application_owner():
-    pytest.skip("A/B: application implementation pending")
+def test_fp_can_3_pending_duplicate_and_application_owner(candidate_client, candidate_user, other_candidate, make_candidate_job):
+    from applications.models import Application
+    from rest_framework.test import APIClient
+
+    job = make_candidate_job()
+    candidate_client.get('/api/auth/csrf/')
+    headers = {'HTTP_X_CSRFTOKEN': candidate_client.cookies['csrftoken'].value}
+    created = candidate_client.post('/api/applications/', {'job_id': job.pk}, format='json', **headers)
+    assert created.status_code == 201
+    row = created.json()['data']
+    assert row['status'] == 'Pending' and row['job']['id'] == job.pk and row['booking'] is None
+    assert candidate_client.post('/api/applications/', {'job_id': job.pk}, format='json', **headers).status_code == 409
+    assert Application.objects.filter(candidate=candidate_user, job=job).count() == 1
+    assert candidate_client.get('/api/applications/').json()['data'] == [row]
+    other = APIClient(enforce_csrf_checks=True)
+    other.force_login(other_candidate)
+    assert other.get('/api/applications/').json()['data'] == []
+    assert other.get(f"/api/applications/{row['id']}/").status_code == 403
+    assert candidate_client.patch(f"/api/applications/{row['id']}/", {'status': 'Accepted'}, format='json', **headers).status_code == 405
+    assert Application.objects.get(pk=row['id']).status == 'Pending'
 
 
 # FP-EMP-1 and FP-EMP-2 are covered by real HTTP tests in
