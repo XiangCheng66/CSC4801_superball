@@ -1,6 +1,6 @@
 # Installation Guide — A/B/C Day 2
 
-当前可运行账号、资料/私有简历/岗位推荐、公司/岗位管理与雇主面试时段。投递、申请人状态和候选人预约仍待实现；演示 seed 不替代最终完整业务重置。
+当前可运行账号、资料/私有简历/岗位推荐、投递与本人申请、公司/岗位管理与雇主面试时段。雇主申请人/状态和候选人预约创建仍待实现；统一 seed_demo 已提供完整业务重置和演示数据。
 
 ## Prerequisites and Versions
 
@@ -163,7 +163,7 @@ npm run build
 .venv/bin/python -m pytest tests/unit/test_matching.py -v
 ```
 
-资料/推荐、公司/岗位和时段管理均有真实用例；尚未实现的申请及预约共 5 项占位明确 skipped，不是通过的需求。
+资料/推荐、投递与本人申请、公司/岗位和时段管理均有真实用例；尚未实现的雇主申请人/状态及候选人预约共 4 项占位明确 skipped，不是通过的需求。
 
 ## Continuous Integration
 
@@ -184,7 +184,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-浏览器测试覆盖三人的独立功能，以及新雇主发布岗位→新求职者推荐→真实时段删除保护的集成流程；使用 e2e_ 演示账号，不调用外部服务。
+浏览器测试覆盖三人的独立功能、新雇主发布岗位→新求职者推荐→真实时段删除保护，以及 A Day 3 的真实投递/持久化、并行重复 201+409、申请越权和手机布局；使用 e2e_ 演示账号，不调用外部服务。
 
 已有 Edge 的 Windows 可不下载 Chromium：
 
@@ -194,6 +194,14 @@ npm.cmd run test:e2e
 ```
 
 `APP_URL` 可指定另一个本地入口，例如 Compose 的 `http://127.0.0.1:8000`。截图位于被 Git 忽略的 `frontend/test-results/`。
+
+## A Day 3：投递和我的申请
+
+沿用现有环境、依赖和迁移，已有账号无需重置。本地演示可执行 `python manage.py seed_demo`（会重置演示业务数据）；以 `candidate3 / LocalDemo!2026` 登录，在岗位推荐给 `[DEMO-A2] Generalist` 投递，切换“我的申请”查看 Pending，再刷新页面确认仍在。回到推荐，已投递岗位显示当前状态，不能重复投递。
+
+candidate1/2/3 可查看统一 seed 的四种申请状态。已有 Booking 时显示其时段和北京时间，状态后来改变也继续显示；当前 seed 不创建预约，候选人预约创建由 C 后续实现。接口、权限和 B/C 接入见 [申请契约](docs/APPLICATION_CONTRACT.md)，验证与剩余范围见 [A Day 3 交接](docs/A_DAY3_HANDOFF.md)。
+
+单独验证：`python -m pytest tests/unit/test_applications.py tests/unit/test_workflows.py -q -ra`。完整测试命令保持不变。
 
 ## Troubleshooting
 

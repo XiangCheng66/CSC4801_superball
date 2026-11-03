@@ -48,6 +48,6 @@ PUT 资料示例：
 
 ## React 与测试
 
-Candidate 工作台保留账号操作，提供个人资料与推荐入口。资料、简历分别保存，切换入口保留草稿。技能输入支持中英文逗号和换行；保存后采用服务端规范化结果，并让后续推荐重新查询。全部用户文本通过 React 文本节点呈现。
+Candidate 工作台保留账号操作，提供个人资料、推荐和我的申请入口。推荐中的投递、本人申请及已有预约只读展示见 [APPLICATION_CONTRACT.md](APPLICATION_CONTRACT.md)。资料、简历分别保存，切换入口保留草稿。技能输入支持中英文逗号和换行；保存后采用服务端规范化结果，并让后续推荐重新查询。全部用户文本通过 React 文本节点呈现。
 
 主要证据：`test_workflows.py` 的 FP-CAN-1/2 真实用例、`test_candidate.py` 的输入/隐私/CSRF/ORM/匹配/seed 测试、CandidateWorkspace 前端测试与 candidate.spec.js 真实浏览器流程。完整复现命令见 INSTALL.md。

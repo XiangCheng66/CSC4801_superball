@@ -1,8 +1,8 @@
-# Project Specification — A/B/C Day 2
+# Project Specification — A Day 3 on A/B/C Day 2
 
 ## Product Scope
 
-已实现账号、求职者资料/私有简历/全部岗位推荐、公司资料、雇主岗位 CRUD 与未来时段管理。三个模块在同一 Django 应用和按角色分配的 React 工作台集成。投递、申请人状态管理、候选人预约与冲突处理仍待实现。
+已实现账号、求职者资料/私有简历/全部岗位推荐、投递与本人申请、公司资料、雇主岗位 CRUD 与未来时段管理。三个模块在同一 Django 应用和按角色分配的 React 工作台集成。雇主申请人查询/状态管理、候选人预约创建与冲突处理仍待实现。
 
 ## Architecture
 
@@ -55,6 +55,8 @@
 | GET/PUT | `/api/candidate/resume/` | 本人私有简历原文 |
 | GET/PUT | `/api/candidate/resumes/<user_id>/` | 仅本人可访问的显式 ID 别名 |
 | GET | `/api/candidate/recommendations/` | 全部岗位与共享匹配排序 |
+| GET/POST | `/api/applications/` | 本人全部申请 / 投递新岗位（201 Pending，重复 409） |
+| GET | `/api/applications/<id>/` | 仅本人申请；不支持自行改状态或撤销 |
 | GET/PUT | `/api/employer/company/` | 本人公司资料；首次 GET 为 404，PUT 新建 201/更新 200 |
 | GET/POST | `/api/employer/jobs/` | 本人岗位列表/创建 |
 | GET/PATCH/DELETE | `/api/employer/jobs/<id>/` | 所有权、部分更新、关联申请或时段时删除 409 |
@@ -70,7 +72,13 @@
 
 响应式账号入口含登录和注册切换。注册可选择两种角色，成功后显示服务端返回的账号信息；账号首页可刷新数据库账号信息、验证角色权限、退出。页面重新加载会通过 `/api/auth/me/` 恢复会话。字段校验与网络失败有可读提示。
 
-React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作台保留账号操作，提供资料/私有简历与推荐。EmployerDashboard 统一显示账号、B 的公司/岗位和 C 的 AvailabilityPanel；成功修改岗位后通过 revision 自动刷新时段选择项。隔离雇主岗位 CSS，避免覆盖求职者列表。手机布局有浏览器检查。
+React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作台保留账号操作，提供资料/私有简历、可投递的推荐与“我的申请”；本人申请展示全部状态和已有预约（北京时间），支持失败重试、手动刷新、空态和会话失效。投递按钮阻止重复事件，409 后重新查询实际状态，写操作不自动重试。EmployerDashboard 统一显示账号、B 的公司/岗位和 C 的 AvailabilityPanel；成功修改岗位后通过 revision 自动刷新时段选择项。隔离雇主岗位 CSS，避免覆盖求职者列表。手机布局有浏览器检查。
+
+## Candidate Applications
+
+字段、错误和共享边界见 [APPLICATION_CONTRACT.md](docs/APPLICATION_CONTRACT.md)。`applications.services.apply_to_job` 是唯一投递写入服务，验证 Candidate，在事务内锁定岗位、检查已有申请并使用模型 Pending 默认值创建；已有唯一约束负责最终防重。捕获完整回滚后的 IntegrityError，仅在确有重复记录时映射 409；其他故障继续抛出。资料、私有简历无需随申请提交，也不复制到申请。
+
+列表仅按会话候选人过滤，返回全部本人申请，按创建时间和整数 ID 降序。详情先认证/角色再查对象和所有权，401/403/404 可区分；本人 PUT/PATCH/DELETE 为 405。POST 只接受整数 job_id，拒绝所有者、状态等额外字段并执行 CSRF。预加载岗位/公司/技能和 Booking/slot，显式输出字段白名单；现有预约在状态变化后继续展示，不提供候选人改状态或预约创建入口。无模型和迁移变更，旧账号可直接使用。
 
 ## Matching Algorithm and Skill Storage
 
@@ -82,7 +90,7 @@ React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作�
 
 两端评分调用同一函数。职位排序按分数降序、标题 casefold、整数职位 ID；申请人排序按分数降序、显示名 casefold、整数求职者 User ID（不是申请 ID）。返回新列表和浅拷贝行，保留其他字段并覆盖旧分数，不修改输入。A 负责提供全部当前职位；B 负责提供已授权职位的申请人；调用方负责筛选公开输出字段，严禁泄露简历。
 
-A 的 RecommendationsView 查询全部实际存在的 Job，预加载雇主公司与岗位技能，再调用 rank_jobs，不分页、不丢弃零分岗位。公司不存在时使用雇主显示名，再回退用户名。响应字段白名单见求职者契约。seed_candidate_demo 的三个候选人与两个岗位覆盖 100/50/0/空要求 100；B 的申请人接口与完整业务重置仍待补。
+A 的 RecommendationsView 查询全部实际存在的 Job，预加载雇主公司与岗位技能，再调用 rank_jobs，不分页、不丢弃零分岗位。公司不存在时使用雇主显示名，再回退用户名。响应字段白名单见求职者契约。统一 seed_demo 的三个候选人与岗位覆盖 100/50/0/空要求 100，并提供四种申请状态；B 的申请人接口仍待补。
 
 ## Interview Scheduling and Booking Transaction
 
@@ -102,9 +110,9 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 ## Design Decisions and Limitations
 
-当前整合 A/B/C Day 2，并补跨模块发布岗位→推荐→时段→删除保护测试。剩余 5 项占位属于投递/申请人及候选人预约/竞争。各分支交接为历史状态，当前情况以本文与集成记录为准。
+当前在 A/B/C Day 2 上完成 A Day 3 的投递/本人申请，保留跨模块发布岗位→推荐→时段→删除保护回归。剩余 4 项占位属于雇主申请人/状态及候选人预约/竞争。各分支交接为历史状态，当前情况以本文与最新交接为准。
 
-数据库/API 使用 UTC，时段 UI 使用北京时间 Asia/Shanghai。构建与测试见 docs/DAY2_INTEGRATION.md；演示 seed 不清空业务库，完整申请/预约重置待后续实现。
+数据库/API 使用 UTC，时段与申请预约 UI 使用北京时间 Asia/Shanghai。构建与测试见 docs/A_DAY3_HANDOFF.md。B 的统一 seed_demo 会重置业务库并重建完整演示数据；增量命令和 --no-reset 用法见 docs/DEMO_DATA.md。
 
 ## Continuous Integration
 
