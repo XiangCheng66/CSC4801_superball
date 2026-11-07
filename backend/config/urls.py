@@ -7,6 +7,7 @@ urlpatterns = [
     path("api/", include("accounts.urls")),
     path("api/", include("candidates.urls")),
     path("api/employer/jobs/", include("jobs.urls")),
+    path("api/employer/applications/", include("applications.employer_urls")),
     path("api/employer/", include("employers.urls")),
     path("api/", include("scheduling.urls")),
     re_path(r"^api(?:/.*)?$", api_not_found),

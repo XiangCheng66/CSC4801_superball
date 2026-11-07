@@ -58,6 +58,8 @@
 | GET/PUT | `/api/employer/company/` | 本人公司资料；首次 GET 为 404，PUT 新建 201/更新 200 |
 | GET/POST | `/api/employer/jobs/` | 本人岗位列表/创建 |
 | GET/PATCH/DELETE | `/api/employer/jobs/<id>/` | 所有权、部分更新、关联申请或时段时删除 409 |
+| GET | `/api/employer/jobs/<id>/applicants/` | 岗位申请人：身份、技能、匹配分、状态、预约；按匹配分降序 |
+| PATCH | `/api/employer/applications/<id>/status/` | 四态状态修改；仅岗位所有者，非所有者 403 |
 | GET/POST | `/api/slots/` | 本人时段列表/未来 30 分钟创建 |
 | GET | `/api/slots/jobs/` | 本人岗位选项 |
 | GET/DELETE | `/api/slots/<id>/` | 本人时段；已预约或已开始不能删除 |
@@ -71,6 +73,8 @@
 响应式账号入口含登录和注册切换。注册可选择两种角色，成功后显示服务端返回的账号信息；账号首页可刷新数据库账号信息、验证角色权限、退出。页面重新加载会通过 `/api/auth/me/` 恢复会话。字段校验与网络失败有可读提示。
 
 React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作台保留账号操作，提供资料/私有简历与推荐。EmployerDashboard 统一显示账号、B 的公司/岗位和 C 的 AvailabilityPanel；成功修改岗位后通过 revision 自动刷新时段选择项。隔离雇主岗位 CSS，避免覆盖求职者列表。手机布局有浏览器检查。
+
+雇主在自己的岗位下点"申请人"展开面板：每行显示候选人显示名、技能、匹配分、申请状态与已预约的面试时间（北京时间），状态下拉可在 `Pending/Interviewing/Rejected/Accepted` 间修改，失败时保留原值并提示。面板只显示公开字段，简历、邮箱与密码哈希不进入该响应。
 
 ## Matching Algorithm and Skill Storage
 

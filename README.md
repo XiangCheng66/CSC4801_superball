@@ -13,7 +13,7 @@
 求职者预约 → 求职者与雇主均能查看预约
 ```
 
-**当前阶段：A/B/C 的 Day 2 已集成。** A 提供个人资料、私有文字简历和全岗位推荐；B 提供公司资料与岗位 CRUD；C 提供雇主未来 30 分钟时段管理。统一工作台保留账号操作，发布/修改/删除岗位后自动刷新时段选择列表；真实时段会阻止删除其岗位。投递、本人申请列表、申请人状态管理和候选人预约仍待实现，5 项占位明确 skipped。
+**当前阶段：A/B/C 的 Day 2 已集成，B 的 Day 4–5 已实现。** A 提供个人资料、私有文字简历和全岗位推荐；B 提供公司资料、岗位 CRUD，以及雇主侧的申请人列表（按共享匹配分排序）与四态状态修改；C 提供雇主未来 30 分钟时段管理。统一工作台保留账号操作，发布/修改/删除岗位后自动刷新时段选择列表；真实时段会阻止删除其岗位。候选人投递与本人申请列表在 `feat/a-day3-applications` 分支待合并；候选人预约创建仍待 C 实现。
 
 ## Team Members
 
@@ -223,7 +223,7 @@ python -m pytest tests/unit -v
 | FP-CAN-3 | A/B：申请默认状态与防重复模型约束已实现；接口待补 | `backend/applications/` | `tests/unit/test_employer_domain_models.py::test_fp_can_3_new_application_defaults_to_pending`；`test_fp_can_3_duplicate_application_is_rejected_by_the_database`（同文件）；工作流测试仍 skipped |
 | FP-EMP-1 | B：公司资料模型、API 与页面已实现 | `backend/employers/`、`frontend/src/pages/employer/` | `tests/unit/test_employer_api.py::test_fp_emp_1_employer_creates_and_reads_own_profile`；`test_fp_emp_1_invalid_profile_is_rejected`；`test_fp_emp_1_candidate_and_anonymous_cannot_touch_a_company_profile`（同文件） |
 | FP-EMP-2 | B/C：本人岗位 CRUD，申请与时段删除保护已接通 | `backend/jobs/`、`backend/scheduling/`、雇主页面 | `tests/unit/test_employer_api.py::test_fp_emp_2_partial_update_changes_only_supplied_fields`；`test_fp_emp_2_other_employer_cannot_edit_or_delete`；`test_fp_emp_2_delete_posting_with_applications_returns_409`（同文件）；`tests/unit/test_day2_integration.py::test_employer_job_candidate_matching_and_slot_deletion_guard_work_together` |
-| FP-EMP-3 | B/C：四态模型约束和共享排序已实现；查询/状态权限接口待补 | `backend/applications/`、`backend/matching/` | `tests/unit/test_employer_domain_models.py::test_fp_emp_3_all_four_statuses_are_storable`；`test_fp_emp_3_unknown_status_is_rejected_by_the_database`（同文件）；工作流测试仍 skipped |
+| FP-EMP-3 | B：申请人列表、匹配分排序、四态状态修改已实现 | `backend/applications/employer_views.py`、`backend/jobs/urls.py`、`frontend/src/pages/employer/` | `tests/unit/test_employer_applicants.py::test_fp_emp_3_applicants_are_ranked_by_match_score_descending`；`test_fp_emp_3_ties_break_by_display_name_then_candidate_id`；`test_fp_emp_3_each_row_carries_identity_skills_score_status_and_booking`；`test_fp_emp_3_employer_never_sees_resume_or_account_secrets`；`test_fp_emp_3_owner_sets_each_allowed_status`；`test_fp_emp_3_other_employer_cannot_change_status`；`test_fp_emp_3_candidate_cannot_change_status`；`test_fp_emp_3_booking_is_visible_and_survives_leaving_interviewing`（同文件）；`EmployerWorkspace.test.jsx::lists applicants with score, skills and status for an owned posting` |
 | FP-MATCH-1 | C：共享算法；A：推荐页面和四分数演示已接入；雇主端待补 | `backend/matching/services.py`、`backend/matching/ranking.py` | `tests/unit/test_matching.py::test_fp_match_1_examples_normalization_and_floor`；`test_fp_match_1_both_tie_breakers`；`test_skill_normalization_does_not_mutate_input`；`test_invalid_skill_types_are_not_treated_as_empty`；`test_ranking_preserves_fields_without_mutating_rows`；`test_rankings_support_empty_rows_and_empty_skill_requirements`；`test_rankings_handle_one_shot_skill_and_row_iterables`；`test_resume_text_cannot_change_match_score_or_order`（同文件） |
 | FP-MATCH-2 | 可选 AI 增强 | N/A，当前未计划实现 | N/A；实现后新增数据流说明和具名单元测试 |
 | FP-SCHED-1 | C：未来 30 分钟时段、时区与删除管理已实现 | `backend/scheduling/`、`frontend/src/pages/scheduling/` | `tests/unit/test_scheduling.py::test_fp_sched_1_slot_creation_timezones_and_deletion`；`test_fp_sched_1_invalid_slots`；`test_foreign_and_missing_objects`；`test_booked_excluded_and_deletion_protected`；`test_database_enforces_duration`（同文件） |

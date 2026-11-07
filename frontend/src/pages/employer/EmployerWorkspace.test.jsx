@@ -8,6 +8,7 @@ vi.mock('../../api/employer', () => ({
   employerApi: {
     getCompany: vi.fn(), saveCompany: vi.fn(), listJobs: vi.fn(),
     createJob: vi.fn(), updateJob: vi.fn(), deleteJob: vi.fn(),
+    listApplicants: vi.fn(), updateApplicationStatus: vi.fn(),
   },
 }));
 
@@ -149,4 +150,100 @@ it('escapes user-controlled job text instead of injecting markup', async () => {
 it('splitSkills trims, drops blanks and keeps the first spelling', () => {
   expect(splitSkills(' Python , python ,, SQL\nGo；Rust ')).toEqual(['Python', 'SQL', 'Go', 'Rust']);
   expect(splitSkills('   ')).toEqual([]);
+});
+
+const applicant = {
+  id: 11,
+  candidate_id: 5,
+  display_name: 'Demo Candidate 1',
+  skills: ['python', 'sql'],
+  match_score: 100,
+  status: 'Pending',
+  booking: null,
+  created_at: '2026-11-03T00:00:00Z',
+  updated_at: '2026-11-03T00:00:00Z',
+};
+
+it('lists applicants with score, skills and status for an owned posting', async () => {
+  employerApi.listJobs.mockResolvedValue([job]);
+  employerApi.listApplicants.mockResolvedValue([applicant]);
+  renderWorkspace();
+
+  await screen.findByText('Backend Engineer');
+  fireEvent.click(screen.getByRole('button', { name: '申请人' }));
+
+  expect(await screen.findByText('Demo Candidate 1')).toBeInTheDocument();
+  expect(screen.getByText('匹配分 100')).toBeInTheDocument();
+  expect(screen.getByText('技能：python、sql')).toBeInTheDocument();
+  expect(screen.getByText('申请人（1）')).toBeInTheDocument();
+  expect(screen.getByLabelText('Demo Candidate 1 的申请状态')).toHaveValue('Pending');
+  expect(employerApi.listApplicants).toHaveBeenCalledWith(7);
+});
+
+it('shows an empty state when nobody applied', async () => {
+  employerApi.listJobs.mockResolvedValue([job]);
+  employerApi.listApplicants.mockResolvedValue([]);
+  renderWorkspace();
+
+  await screen.findByText('Backend Engineer');
+  fireEvent.click(screen.getByRole('button', { name: '申请人' }));
+
+  expect(await screen.findByText('还没有人投递这个岗位。')).toBeInTheDocument();
+});
+
+it('changes an applicant status through the API and reflects the new value', async () => {
+  employerApi.listJobs.mockResolvedValue([job]);
+  employerApi.listApplicants.mockResolvedValue([applicant]);
+  employerApi.updateApplicationStatus.mockResolvedValue({ ...applicant, status: 'Interviewing' });
+  renderWorkspace();
+
+  await screen.findByText('Backend Engineer');
+  fireEvent.click(screen.getByRole('button', { name: '申请人' }));
+  fireEvent.change(await screen.findByLabelText('Demo Candidate 1 的申请状态'), {
+    target: { value: 'Interviewing' },
+  });
+
+  await waitFor(() => expect(employerApi.updateApplicationStatus).toHaveBeenCalledWith(11, 'Interviewing'));
+  await waitFor(() =>
+    expect(screen.getByLabelText('Demo Candidate 1 的申请状态')).toHaveValue('Interviewing'),
+  );
+  expect(screen.getByText('已将「Demo Candidate 1」设为面试中。')).toBeInTheDocument();
+});
+
+it('surfaces a failed applicant load without dropping the posting', async () => {
+  employerApi.listJobs.mockResolvedValue([job]);
+  employerApi.listApplicants.mockRejectedValue(new ApiError('面试时段服务不可用', { status: 500 }));
+  renderWorkspace();
+
+  await screen.findByText('Backend Engineer');
+  fireEvent.click(screen.getByRole('button', { name: '申请人' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('面试时段服务不可用');
+  expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
+});
+
+it('collapses the applicant panel when the toggle is pressed again', async () => {
+  employerApi.listJobs.mockResolvedValue([job]);
+  employerApi.listApplicants.mockResolvedValue([applicant]);
+  renderWorkspace();
+
+  await screen.findByText('Backend Engineer');
+  fireEvent.click(screen.getByRole('button', { name: '申请人' }));
+  await screen.findByText('Demo Candidate 1');
+  fireEvent.click(screen.getByRole('button', { name: '收起申请人' }));
+
+  await waitFor(() => expect(screen.queryByText('Demo Candidate 1')).toBeNull());
+});
+
+it('shows a booking time in Beijing time when an interview is arranged', async () => {
+  employerApi.listJobs.mockResolvedValue([job]);
+  employerApi.listApplicants.mockResolvedValue([
+    { ...applicant, status: 'Interviewing', booking: { id: 3, slot_id: 9, start_at: '2026-11-08T01:00:00Z', end_at: '2026-11-08T01:30:00Z' } },
+  ]);
+  renderWorkspace();
+
+  await screen.findByText('Backend Engineer');
+  fireEvent.click(screen.getByRole('button', { name: '申请人' }));
+
+  expect(await screen.findByText(/09:00（北京时间）/)).toBeInTheDocument();
 });
