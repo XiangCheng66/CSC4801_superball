@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { candidateApi } from '../../api/candidate';
+import BookingPanel from '../scheduling/BookingPanel';
 import AccountHome from '../../components/AccountHome';
 
 function FieldError({ fields, name, id }) {
@@ -143,8 +144,10 @@ export default function CandidateWorkspace({ user, onUserChanged, onLoggedOut })
       <nav className="tabs workspace-tabs" aria-label="求职者功能">
         <button className={tab === 'profile' ? 'active' : ''} aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}>个人资料</button>
         <button className={tab === 'jobs' ? 'active' : ''} aria-pressed={tab === 'jobs'} onClick={() => setTab('jobs')}>岗位推荐</button>
+        <button className={tab === 'bookings' ? 'active' : ''} aria-pressed={tab === 'bookings'} onClick={() => setTab('bookings')}>面试预约</button>
       </nav>
       <div hidden={tab !== 'profile'}><ProfileEditor onUserChanged={onUserChanged} onLoggedOut={onLoggedOut} onSkillsSaved={() => setRevision((value) => value + 1)} /></div>
+      {tab === 'bookings' && <BookingPanel role="Candidate" onLoggedOut={onLoggedOut} />}
       {tab === 'jobs' && <Recommendations revision={revision} onLoggedOut={onLoggedOut} />}
     </section>
   </div>;

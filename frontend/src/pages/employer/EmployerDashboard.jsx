@@ -1,3 +1,4 @@
+import BookingPanel from '../scheduling/BookingPanel';
 import { useState } from 'react';
 import AccountHome from '../../components/AccountHome';
 import AvailabilityPanel from '../scheduling/AvailabilityPanel';
@@ -10,6 +11,7 @@ export default function EmployerDashboard({ user, onUserChanged, onLoggedOut }) 
     <div className="employer-content">
       <EmployerWorkspace user={user} onLoggedOut={onLoggedOut} embedded onJobsChanged={() => setRevision((value) => value + 1)} />
       <AvailabilityPanel onLoggedOut={onLoggedOut} revision={revision} />
+      <BookingPanel role="Employer" onLoggedOut={onLoggedOut} />
     </div>
   </div>;
 }

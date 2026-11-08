@@ -2,7 +2,7 @@
 
 ## Product Scope
 
-已实现账号、求职者资料/私有简历/全部岗位推荐、公司资料、雇主岗位 CRUD 与未来时段管理。三个模块在同一 Django 应用和按角色分配的 React 工作台集成。投递、申请人状态管理、候选人预约与冲突处理仍待实现。
+已实现账号、求职者资料/私有简历/全部岗位推荐、公司资料、雇主岗位 CRUD 与未来时段管理。三个模块在同一 Django 应用和按角色分配的 React 工作台集成。本分支已实现 C Day 3 候选人预约、双方查看和原子冲突处理；投递和申请人状态管理待 A/B Day 3 合入。
 
 ## Architecture
 
@@ -24,7 +24,7 @@
 - `Job` 通过 `employer` 外键指向 `accounts.User`（不是 CompanyProfile），标题与描述非空；`RequiredSkill` 为子表，同一岗位内技能名不区分大小写唯一，岗位可以没有技能。
 - `Application` 关联 `Job` 与候选人账号，`UNIQUE(job, candidate)` 阻止重复投递；`job` 外键使用 `PROTECT`，使带申请的岗位无法被删除并在接口层映射为 `409`；`status` 由 `CHECK` 约束限定为 `Pending/Interviewing/Rejected/Accepted`。
 
-`candidates.CandidateProfile` 以 User ID 为主键，保存技能 JSON、私有 resume_text 与时间戳，显示名仍在 User。旧账号 GET 返回空资料，首次 PUT 创建记录；两写接口锁 User 并只更新各自字段。`scheduling.InterviewSlot` 关联 Job（PROTECT），数据库 CHECK 限制恰好 30 分钟；所有者由 job.employer 派生。最小 Booking 的 slot/application 分别 OneToOne+PROTECT，仅实现存储和保护，完整预约服务尚未实现。
+`candidates.CandidateProfile` 以 User ID 为主键，保存技能 JSON、私有 resume_text 与时间戳，显示名仍在 User。旧账号 GET 返回空资料，首次 PUT 创建记录；两写接口锁 User 并只更新各自字段。`scheduling.InterviewSlot` 关联 Job（PROTECT），数据库 CHECK 限制恰好 30 分钟；所有者由 job.employer 派生。最小 Booking 的 slot/application 分别 OneToOne+PROTECT，由 C Day 3 的事务服务使用，完整接口见 [预约契约](docs/BOOKING_CONTRACT.md)。
 
 ## Authentication and Authorization
 
@@ -86,7 +86,7 @@ A 的 RecommendationsView 查询全部实际存在的 Job，预加载雇主公�
 
 ## Interview Scheduling and Booking Transaction
 
-C 已实现雇主时段列表、未来 30 分钟创建、仅本人删除、已预约/已开始删除拒绝与可用筛选。API 接受明确时区、输出 UTC，UI 固定 Asia/Shanghai。创建事务锁 Job，删除锁 InterviewSlot；真实时段使 B 的岗位删除返回 409。Booking 目前仅提供存储和约束；FP-SCHED-2/3 的完整资格、预约入口与原子竞争仍待实现。
+C 已实现雇主时段列表、未来 30 分钟创建、仅本人删除、已预约/已开始删除拒绝与可用筛选。API 接受明确时区、输出 UTC，UI 固定 Asia/Shanghai。创建事务锁 Job，删除锁 InterviewSlot；真实时段使 B 的岗位删除返回 409。C Day 3 已实现 FP-SCHED-2/3：先锁申请再锁时段，在锁内检查归属、同一雇主、Interviewing、未来与无预约；唯一约束兜底。事务回滚后区分真实预约冲突，争抢时段返回 409 和 `Slot already booked`。双方查询保留状态改变后的预约，见 [预约契约](docs/BOOKING_CONTRACT.md)。
 
 ## Security Controls
 
@@ -102,9 +102,9 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 ## Design Decisions and Limitations
 
-当前整合 A/B/C Day 2，并补跨模块发布岗位→推荐→时段→删除保护测试。剩余 5 项占位属于投递/申请人及候选人预约/竞争。各分支交接为历史状态，当前情况以本文与集成记录为准。
+当前整合 A/B/C Day 2，并补跨模块发布岗位→推荐→时段→删除保护测试。C Day 3 已实现预约与竞争，剩余 2 项占位属于尚未合入的 A/B 投递/申请人工作流。各分支交接为历史状态，当前情况以本文与集成记录为准。
 
-数据库/API 使用 UTC，时段 UI 使用北京时间 Asia/Shanghai。构建与测试见 docs/DAY2_INTEGRATION.md；演示 seed 不清空业务库，完整申请/预约重置待后续实现。
+数据库/API 使用 UTC，时段 UI 使用北京时间 Asia/Shanghai。构建与测试见 docs/DAY2_INTEGRATION.md；完整 seed_demo 默认重置业务表，只在可重置的演示库运行；其他增量 seed 保留原数据。
 
 ## Continuous Integration
 

@@ -107,3 +107,15 @@ summary { cursor: pointer; color: #36593c; font-weight: 600; padding: 7px 0; }
 .employer-content { display: grid; gap: 28px; min-width: 0; }
 .employer-content > .auth-card { min-width: 0; }
 @media (max-width: 1000px) { .employer-dashboard { grid-template-columns: minmax(0, 1fr); } .employer-dashboard > .account-card { position: static; } }
+
+.booking-panel { grid-column: 1 / -1; min-width: 0; }
+.booking-panel .availability-header { margin-bottom: 24px; }
+.booking-create { border-bottom: 1px solid #e2e5d9; padding-bottom: 24px; margin-bottom: 24px; }
+.booking-create > .hint { margin: 12px 0; }
+.booking-list { list-style: none; padding: 0; display: grid; gap: 12px; }
+.booking-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 18px; border: 1px solid #e2e5d9; border-radius: 10px; background: #f6f7f0; font-size: 13px; overflow-wrap: anywhere; }
+.booking-list li > div { min-width: 0; }
+.booking-list button { flex-shrink: 0; }
+@media (max-width: 650px) { .booking-list li { flex-direction: column; } .workspace-tabs { grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); } }
+.workspace-tabs { grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); }
+.candidate-workspace .workspace-content > .booking-panel { padding: 0; border: 0; box-shadow: none; }

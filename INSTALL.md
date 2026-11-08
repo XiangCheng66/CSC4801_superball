@@ -1,6 +1,6 @@
 # Installation Guide — A/B/C Day 2
 
-当前可运行账号、资料/私有简历/岗位推荐、公司/岗位管理与雇主面试时段。投递、申请人状态和候选人预约仍待实现；演示 seed 不替代最终完整业务重置。
+当前可运行账号、资料/私有简历/岗位推荐、公司/岗位管理与雇主面试时段。候选人预约与双方查看已实现，投递和申请人状态管理待 A/B Day 3 合入。seed_demo 提供业务重置，只在独立演示库运行。
 
 ## Prerequisites and Versions
 
@@ -163,7 +163,7 @@ npm run build
 .venv/bin/python -m pytest tests/unit/test_matching.py -v
 ```
 
-资料/推荐、公司/岗位和时段管理均有真实用例；尚未实现的申请及预约共 5 项占位明确 skipped，不是通过的需求。
+资料/推荐、公司/岗位和时段管理均有真实用例；尚未合入的 A/B Day 3 工作流共 2 项占位明确 skipped；SQLite 另跳过 2 项仅 PostgreSQL 执行的并发测试，不是通过的需求。
 
 ## Continuous Integration
 
@@ -215,6 +215,12 @@ python manage.py seed_demo
 
 Compose 对应命令为 `docker compose exec -T app python manage.py seed_demo`。它在 employer1 的 `[Local demo] Interview availability` 岗位下添加北京时间明天 09:00、09:30 两个时段，并同时重建公司、岗位、申请等演示数据（会清空业务行）。只补时段而不清库时用 `python manage.py seed_availability_demo`。employer2 看不到 employer1 的岗位/时段。
 
-雇主登录后的工作台同时显示公司/岗位和时段。发布、编辑或删除岗位会自动刷新时段选择；时段 UI 固定北京时间，API 使用 UTC。有时段的岗位删除返回 409，先删除允许删除的时段后才能删除岗位。候选人预约入口尚未实现。
+雇主登录后的工作台同时显示公司/岗位和时段。发布、编辑或删除岗位会自动刷新时段选择；时段 UI 固定北京时间，API 使用 UTC。有时段的岗位删除返回 409，先删除允许删除的时段后才能删除岗位。求职者可在“面试预约”入口选择本人 Interviewing 申请及同雇主时段；雇主在工作台查看收到的预约。
 
 单独测试：`python -m pytest tests/unit/test_scheduling.py -q -ra`。完整整合验证见 [Day 2 集成记录](docs/DAY2_INTEGRATION.md)。
+
+## C Day 3 预约验收
+
+沿用现有 migrate，无新迁移。仅在独立、可重置的本地演示库执行 `python manage.py seed_demo`，使用 candidate1 / candidate3 的 Interviewing 申请竞争 employer1 的时段。两名候选人与雇主的演示密码均为 `LocalDemo!2026`。
+
+后端：`python -m pytest tests/unit/test_booking.py -q -ra`；设置 `TEST_DATABASE_ENGINE=postgresql` 运行两项真实双连接竞争测试。前端：`npm test`。浏览器：刚重置的专用演示库上运行 `npm run test:e2e`，新增 booking.spec.js 会创建真实预约；重跑前需重置该专用库。不要对个人业务库运行重置。当前主线尚无投递/改申请状态入口，这部分待 A/B Day 3 合并后联调。

@@ -1,6 +1,6 @@
 # 公共 API 与请求约定（A / Day 1）
 
-这是 A/B/C 共同使用的基础契约。以下认证接口已经实现；C 的雇主时段接口见 [时段契约](SCHEDULING_CONTRACT.md)。岗位 CRUD、申请和候选人预约接口由 B/C 后续补充，不将草稿路径当作已上线功能。
+这是 A/B/C 共同使用的基础契约。以下认证接口已经实现；C 的雇主时段接口见 [时段契约](SCHEDULING_CONTRACT.md)。岗位 CRUD 已实现，候选人预约见本文末的 C Day 3 契约；投递/申请人管理待 A/B Day 3 合入，不将草稿路径当作已上线功能。
 
 ## 请求与响应
 
@@ -125,3 +125,7 @@ application = get_owned_object(
 先做认证和角色检查，再做对象查询/所有权检查。已有对象但所有权错误返回 403；不存在且调用者原本允许访问的对象返回 404。`get_owned_object` 不是角色检查或全部业务校验的替代；岗位、简历、申请、预约仍须分别补充自己的授权和业务规则。
 
 A Day 2 已实现资料/私有简历与岗位推荐，新增接口与字段见 [求职者契约](CANDIDATE_CONTRACT.md)。旧认证响应字段保持不变，尤其不嵌入 CandidateProfile 或简历。
+
+## C Day 3 预约
+
+已实现 `/api/booking-applications/`、本人申请的可用时段、`/api/bookings/` 创建/双方列表和预约详情；请求、权限、错误和事务规则见 [预约契约](BOOKING_CONTRACT.md)。
