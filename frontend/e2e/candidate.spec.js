@@ -1,15 +1,15 @@
 import { expect, test } from '@playwright/test';
 
-async function register(page) {
+async function register(page, displayName = 'Browser Candidate') {
   const username = `e2e_candidate_${Date.now()}`;
   await page.goto('/');
   await page.getByRole('button', { name: '创建账号', exact: true }).click();
   await page.getByLabel('用户名', { exact: true }).fill(username);
-  await page.getByLabel('显示名称', { exact: true }).fill('Browser Candidate');
+  await page.getByLabel('显示名称', { exact: true }).fill(displayName);
   await page.getByLabel('邮箱', { exact: true }).fill(`${username}@example.test`);
   await page.getByLabel('密码', { exact: true }).fill('BrowserDemo!2026');
   await page.getByRole('button', { name: '创建账号并登录' }).click();
-  await expect(page.getByRole('heading', { name: '你好，Browser Candidate' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `你好，${displayName}` })).toBeVisible();
   await expect(page.getByLabel('技术技能')).toBeVisible();
   return (await (await page.request.get('/api/auth/me/')).json()).data;
 }
@@ -18,6 +18,34 @@ async function put(context, path, data) {
   const csrf = await (await context.get('/api/auth/csrf/')).json();
   return context.put(path, { data, headers: { 'X-CSRFToken': csrf.data.csrfToken } });
 }
+
+test('refreshing after another tab switches accounts clears the previous private resume', async ({ page, context }) => {
+  const first = await register(page, 'First Private Candidate');
+  const resume = page.getByLabel('文字简历');
+  await resume.fill('First candidate private resume');
+  await page.getByRole('button', { name: '保存简历' }).click();
+  await expect(page.getByText('简历已保存，仅你本人可以访问。')).toBeVisible();
+
+  const otherTab = await context.newPage();
+  try {
+    await otherTab.goto('/');
+    await otherTab.getByRole('button', { name: '退出登录' }).click();
+    await expect(otherTab.getByRole('heading', { name: '欢迎回来' })).toBeVisible();
+    await register(otherTab, 'Second Private Candidate');
+    await otherTab.getByLabel('文字简历').fill('Second candidate private resume');
+    await otherTab.getByRole('button', { name: '保存简历' }).click();
+    await expect(otherTab.getByText('简历已保存，仅你本人可以访问。')).toBeVisible();
+
+    await page.getByRole('button', { name: '刷新账号信息' }).click();
+    await expect(page.getByRole('heading', { name: '你好，Second Private Candidate' })).toBeVisible();
+    await expect(resume).toHaveValue('Second candidate private resume');
+    const forbidden = await page.request.get(`/api/candidate/resumes/${first.id}/`);
+    expect(forbidden.status()).toBe(403);
+    expect(await forbidden.text()).not.toContain('First candidate private resume');
+  } finally {
+    await otherTab.close();
+  }
+});
 
 test('candidate saves and reloads private raw text; direct cross-user access is forbidden', async ({ page, request }) => {
   const owner = await register(page);

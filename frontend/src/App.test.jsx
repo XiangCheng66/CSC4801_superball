@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import App from './App';
 import { authApi } from './api/auth';
@@ -8,7 +8,7 @@ import { availabilityApi } from './api/scheduling';
 import { candidateApi } from './api/candidate';
 
 vi.mock('./api/auth', () => ({ authApi: { me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn(), workspace: vi.fn() } }));
-vi.mock('./api/candidate', () => ({ candidateApi: { profile: vi.fn(), resume: vi.fn() } }));
+vi.mock('./api/candidate', () => ({ candidateApi: { profile: vi.fn(), resume: vi.fn(), saveProfile: vi.fn() } }));
 vi.mock('./api/employer', () => ({ employerApi: { getCompany: vi.fn(), listJobs: vi.fn(), saveCompany: vi.fn(), createJob: vi.fn(), updateJob: vi.fn(), deleteJob: vi.fn() } }));
 vi.mock('./api/scheduling', () => ({ availabilityApi: { jobs: vi.fn(), list: vi.fn(), create: vi.fn(), remove: vi.fn() } }));
 const user = { id: 1, username: 'alice', email: 'alice@example.test', display_name: 'Alice', role: 'Candidate' };
@@ -59,6 +59,53 @@ it('restores a stored session, reads current user data and logs out', async () =
   fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
   await screen.findByRole('heading', { name: '欢迎回来' });
   expect(authApi.logout).toHaveBeenCalledTimes(1);
+});
+
+it('discards the previous private workspace when an account refresh returns another candidate', async () => {
+  const other = { ...user, id: 2, username: 'bob', email: 'bob@example.test', display_name: 'Bob' };
+  authApi.me.mockResolvedValueOnce(user).mockResolvedValueOnce(other);
+  candidateApi.profile.mockResolvedValueOnce({ user_id: 1, display_name: 'Alice', skills: [] })
+    .mockResolvedValueOnce({ user_id: 2, display_name: 'Bob', skills: [] });
+  candidateApi.resume.mockResolvedValueOnce({ user_id: 1, resume_text: 'Alice private draft' })
+    .mockResolvedValueOnce({ user_id: 2, resume_text: 'Bob private draft' });
+  render(<App />);
+  await screen.findByDisplayValue('Alice private draft');
+  fireEvent.click(screen.getByRole('button', { name: '刷新账号信息' }));
+  await screen.findByRole('heading', { name: '你好，Bob' });
+  expect(screen.queryByDisplayValue('Alice private draft')).not.toBeInTheDocument();
+  expect(await screen.findByDisplayValue('Bob private draft')).toBeInTheDocument();
+});
+
+it('does not reopen a logged-out workspace when a previous profile save completes', async () => {
+  let finishSave;
+  authApi.me.mockResolvedValue(user);
+  authApi.logout.mockResolvedValue({ message: 'Logged out.' });
+  candidateApi.saveProfile.mockImplementation(() => new Promise((resolve) => { finishSave = resolve; }));
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: '保存资料' }));
+  fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
+  await screen.findByRole('heading', { name: '欢迎回来' });
+  await act(async () => finishSave({ user_id: 1, display_name: 'Old session', skills: [] }));
+  expect(screen.getByRole('heading', { name: '欢迎回来' })).toBeInTheDocument();
+});
+
+it('ignores a previous session’s 401 after another candidate has logged in', async () => {
+  let failSave;
+  const other = { ...user, id: 2, username: 'bob', email: 'bob@example.test', display_name: 'Bob' };
+  authApi.me.mockResolvedValue(user);
+  authApi.logout.mockResolvedValue({ message: 'Logged out.' });
+  authApi.login.mockResolvedValue(other);
+  candidateApi.saveProfile.mockImplementation(() => new Promise((_, reject) => { failSave = reject; }));
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: '保存资料' }));
+  fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
+  await screen.findByRole('heading', { name: '欢迎回来' });
+  fireEvent.change(screen.getByLabelText('用户名'), { target: { value: 'bob' } });
+  fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'secret' } });
+  fireEvent.click(screen.getByRole('button', { name: '登录账号' }));
+  await screen.findByRole('heading', { name: '你好，Bob' });
+  await act(async () => failSave(new ApiError('Expired', { status: 401 })));
+  expect(screen.getByRole('heading', { name: '你好，Bob' })).toBeInTheDocument();
 });
 
 it('shows API validation messages without losing the form', async () => {

@@ -30,6 +30,7 @@
 
 - 注册使用 Django 密码校验和 `create_user/set_password`，数据库保存 PBKDF2-SHA256 盐化哈希。公开序列化器只输出 `id/username/email/display_name/role`。
 - Django 数据库会话 + HttpOnly、SameSite=Lax Cookie。注册与登录成功后建立/轮换会话，退出在服务端使其失效。
+- API 响应含 `Cache-Control: no-store`，避免 HTTP 缓存保留私有数据、会话信息和 CSRF 响应。切换账号时重新挂载工作台；旧会话的异步响应不能更新、恢复或退出新会话。
 - 注册/登录显式使用 CSRF 保护，认证后的写操作使用 SessionAuthentication 的 CSRF 校验。前端从当前 CSRF Cookie 生成 `X-CSRFToken`，不缓存登录前的令牌。
 - 默认 API 要求登录；自定义 SessionAuthentication challenge 使匿名受保护请求返回 401，而不是 DRF SessionAuthentication 默认可能出现的 403。
 - `common.permissions.IsCandidate/IsEmployer` 验证角色。`get_owned_object(queryset, user, owner_field=..., **lookup)` 验证身份后查找并检查所有权。先在 View 检查角色，再检查对象归属，区分 401/403/404。
@@ -86,7 +87,7 @@ React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作�
 
 技能输入为字符串列表，归一化为去首尾空格、转小写、去空值和去重的集合 C/R。R 为空时得分 100，否则用整数运算 `100 * len(C & R) // len(R)` 向下取整；简历不是评分参数。非法技能类型抛出 TypeError，HTTP 层须先用 serializer 验证。
 
-岗位技能由 B 的 RequiredSkill 子表保存，Job.required_skill_names 转换为列表；查询推荐时预取 required_skills。求职者技能由 CandidateProfile.skills JSONField 保存：API 严格接收字符串数组，strip/lower/去空值/去重/排序，单项去首尾空白后的输入及规范化结果不超过 100 字符。无资料时按空技能计算；matching 只接收内存集合，不直接读库。
+岗位技能由 B 的 RequiredSkill 子表保存，Job.required_skill_names 转换为列表；查询推荐时预取 required_skills。求职者技能由 CandidateProfile.skills JSONField 保存：API 严格接收字符串数组，拒绝 NUL 和未配对的 Unicode 代理字符；strip/lower/去空值/去重/排序，单项去首尾空白后的输入及规范化结果不超过 100 字符。无资料时按空技能计算；matching 只接收内存集合，不直接读库。
 
 两端评分调用同一函数。职位排序按分数降序、标题 casefold、整数职位 ID；申请人排序按分数降序、显示名 casefold、整数求职者 User ID（不是申请 ID）。返回新列表和浅拷贝行，保留其他字段并覆盖旧分数，不修改输入。A 负责提供全部当前职位；B 负责提供已授权职位的申请人；调用方负责筛选公开输出字段，严禁泄露简历。
 

@@ -1,11 +1,11 @@
-# Installation Guide — A/B/C Day 2
+# Installation Guide
 
 当前可运行账号、资料/私有简历/岗位推荐、投递与本人申请、公司/岗位管理与雇主面试时段。雇主申请人/状态和候选人预约创建仍待实现；统一 seed_demo 已提供完整业务重置和演示数据。
 
 ## Prerequisites and Versions
 
 - 本机开发：Python 3.11 或 3.12、Node.js 22（至少 22.12，低于 23）、npm 10/11、PostgreSQL 17。
-- 容器运行：Docker Engine/Desktop 和 Docker Compose v2；镜像为 `node:22-bookworm-slim`、`python:3.12-slim-bookworm`、`postgres:17-bookworm`。所有依赖镜像均在 Dockerfile/compose.yaml 显式声明。
+- 容器运行：Docker Engine/Desktop 和支持 `docker compose up --wait` 的 Compose。镜像为 `node:22-bookworm-slim`、`python:3.12-slim-bookworm`、`postgres:17-bookworm`，均在 Dockerfile/compose.yaml 显式声明。只使用容器时无需在宿主机安装 Node、Python 或 PostgreSQL。
 - Python 完整版本锁在 `requirements.lock`，直接依赖范围在 `requirements.in`；React/构建/测试依赖锁在 `frontend/package-lock.json`。
 - 核心功能、单元测试和浏览器测试均不使用第三方模型或付费 API。
 
@@ -17,35 +17,38 @@
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-macOS/Linux 使用 `cp .env.example .env`。修改 `.env` 的 `DJANGO_SECRET_KEY` 与 `POSTGRES_PASSWORD` 占位值；可用 `python -c "import secrets; print(secrets.token_urlsafe(48))"` 生成本地随机值。`.env` 不提交，manage.py 和 Compose 均读取它。
+macOS/Linux 使用 `test -f .env || cp .env.example .env`。用随机值替换 `.env` 的 `DJANGO_SECRET_KEY` 与 `POSTGRES_PASSWORD` 占位值，可用密码管理器生成，或使用已有 Python 执行 `python -c "import secrets; print(secrets.token_urlsafe(48))"`。`.env` 不提交，manage.py 和 Compose 均读取它。
 
 | 变量 | 用途 / 本地值 |
 |---|---|
-| `DJANGO_DEBUG` | 本地为 `1`；共享部署设 `0` |
+| `DJANGO_DEBUG` | 示例默认 `0`；仅本机开发排查时设 `1` |
 | `DJANGO_SECRET_KEY` | 稳定的本地秘密；DEBUG=0 时必须至少 50 字符且不能是示例占位值 |
 | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1`，逗号分隔 |
 | `DATABASE_ENGINE` | 默认 `postgresql`；`sqlite` 仅为显式的轻量开发选项 |
 | `POSTGRES_DB` / `POSTGRES_USER` | 默认均为 `superball` |
 | `POSTGRES_PASSWORD` | 本地数据库密码，与数据库创建时一致 |
-| `POSTGRES_HOST` / `POSTGRES_PORT` | 本机默认 `127.0.0.1:5432`；Compose 自动覆盖为 `db:5432` |
+| `POSTGRES_HOST` / `POSTGRES_PORT` | 本机默认 `127.0.0.1:5432`；`POSTGRES_PORT` 同时控制 Compose 的宿主机映射，app 容器仍连接 `db:5432` |
+| `APP_PORT` | Compose 的宿主机网站端口，默认 `8000`；与本机 Vite 或其他副本隔离时修改 |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | 默认允许本地 Vite 的 `http://localhost:5173,http://127.0.0.1:5173` |
 | `DJANGO_SECURE_COOKIES` | HTTP 本机为 `0`，HTTPS 环境应为 `1` |
-| `SEED_AUTH_DEMO` | Compose 设 `1` 时启动生成公开的本地演示账号；否则不自动 seed |
+| `SEED_AUTH_DEMO` | 默认 `0`；本地设 `1` 时，启动只补齐缺失的四个演示账号，保留已有账号与密码 |
 | `TEST_DATABASE_ENGINE` | 默认独立 SQLite 内存测试库；`postgresql` 时使用独立 `test_<POSTGRES_DB>` 库 |
 
 ## Docker Build and Startup
 
-在根目录准备好 `.env` 后执行：
+从目标提交的干净 checkout 开始，在根目录准备好 `.env` 后执行：
 
 ```bash
 docker compose pull db
 docker compose build app
-docker compose up -d
+docker compose up -d --no-build --wait --wait-timeout 120
 docker compose exec -T app python manage.py seed_demo
 docker compose ps
 ```
 
-打开 **http://127.0.0.1:8000**。应用镜像构建时执行前端单元测试并打包 React；启动时自动迁移，按 `SEED_AUTH_DEMO` 生成演示账号，然后用 Gunicorn 在同一站点提供前端与 API。数据库健康后才启动应用。
+打开 **http://127.0.0.1:8000**（或配置的 `APP_PORT`）。镜像构建时执行前端单元测试并打包 React。PostgreSQL 的 TCP 端口就绪后，应用自动迁移并启动 Gunicorn；`--wait` 确认两个服务健康后才执行 seed。`/api/health/` 应返回 `data.status=ok`、`data.database=postgresql`。
+
+验收或并行开发可以在独立 checkout 设置不同的 `APP_PORT`、`POSTGRES_PORT`，并给每条 Compose 命令加同一个项目名，例如 `docker compose -p superball-review …`，使数据库卷与已有环境隔离。
 
 应用本身的独立构建命令为 `docker build -t superball-app .`；完整环境仍按上面的 Compose 命令启动数据库与应用，依赖镜像不隐式下载。
 
@@ -60,9 +63,9 @@ docker compose exec -T -e TEST_DATABASE_ENGINE=postgresql app python -m pytest t
 docker compose down
 ```
 
-`postgres_data` 卷在普通 `down` 后保留。仅需完全重置本地 Compose 演示库时执行 `docker compose down --volumes`，然后重新 `docker compose up -d`；该操作会清空此 Compose 项目的数据库卷。
+`postgres_data` 卷在普通 `down` 后保留。完全重置本地 Compose 演示库时可运行 `docker compose down --volumes`，再按上面的启动与 seed 步骤重建；该操作会清空此 Compose 项目的数据库卷。
 
-构建和容器验证证据见 docs/A_DAY2_HANDOFF.md。上述测试把缓存放到 /tmp，以适配镜像中非 root 的 student 用户。
+构建和容器验收见 [A 收尾交接](docs/A_FINAL_HANDOFF.md)。上述测试把缓存放到 /tmp，以适配镜像中非 root 的 student 用户。PostgreSQL 测试库只用于测试，单元测试无需 seed。
 
 ## Local Development
 
@@ -184,7 +187,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-浏览器测试覆盖三人的独立功能、新雇主发布岗位→新求职者推荐→真实时段删除保护，以及 A Day 3 的真实投递/持久化、并行重复 201+409、申请越权和手机布局；使用 e2e_ 演示账号，不调用外部服务。
+浏览器测试覆盖发布岗位、推荐、投递、时段删除保护、并行重复投递、直接越权、同浏览器换账号后的简历隔离及手机布局；使用 e2e_ 演示账号，不调用外部服务。
 
 已有 Edge 的 Windows 可不下载 Chromium：
 
@@ -211,7 +214,8 @@ candidate1/2/3 可查看统一 seed 的四种申请状态。已有 Booking 时�
 - 401：未登录或会话已失效。重新登录；改了 SECRET_KEY 会使旧会话失效。
 - Node 引擎不兼容：使用 Node 22.12+（22 系列）。若 npm 10 安装出现 `edgesOut` 内部错误，可执行 `npx --yes npm@11 ci`，无需全局改动。
 - 后端直接访问 `/` 返回 `frontend_not_built`：本机开发使用 Vite 的 5173 入口；容器构建会复制并提供前端文件。
-- 端口占用：先确认运行中的本地实例，再调整端口与对应代理/CSRF 配置。
+- 端口占用：Docker 预览改 `.env` 的 `APP_PORT` / `POSTGRES_PORT`；Vite 开发改代理目标或 CSRF 配置。
+- `up --wait` 报错：用 `docker compose ps` 和 `docker compose logs db app` 检查启动错误。使用已初始化的数据库卷时，修改 `.env` 不会自动修改库中的密码。
 
 ## C Day 2：运行时段管理
 

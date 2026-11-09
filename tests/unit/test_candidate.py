@@ -1,3 +1,4 @@
+import json
 from io import StringIO
 
 import pytest
@@ -18,12 +19,18 @@ pytestmark = pytest.mark.django_db
     {"skills": "Python"}, {"skills": {}}, {"skills": None}, {"skills": 3},
     {"skills": [1]}, {"skills": [True]}, {"skills": [None]}, {"skills": [[]]},
     {"skills": ["x" * 101]}, {"skills": ["İ" * 100]},
+    pytest.param({"skills": ["python\x00"]}, id="nul-in-skill"),
+    pytest.param({"skills": ["\ud800"]}, id="unpaired-surrogate-in-skill"),
     {"user_id": 99}, {"role": "Employer"}, {"resume_text": "must use private endpoint"},
 ])
-def test_invalid_profile_input_is_atomic(candidate_user, candidate_client, candidate_put, changes):
+def test_invalid_profile_input_is_atomic(candidate_user, candidate_client, changes):
     original = CandidateProfile.objects.create(user=candidate_user, skills=["rust"], resume_text="PRIVATE ORIGINAL")
     payload = {"display_name": "Changed", "skills": ["Python"], **changes}
-    result = candidate_put(candidate_client, "/api/candidate/profile/", payload)
+    candidate_client.get("/api/auth/csrf/")
+    result = candidate_client.put(
+        "/api/candidate/profile/", json.dumps(payload), content_type="application/json",
+        HTTP_X_CSRFTOKEN=candidate_client.cookies["csrftoken"].value,
+    )
     assert result.status_code == 400 and result.json()["error"]["code"] == "validation_error"
     candidate_user.refresh_from_db()
     original.refresh_from_db()

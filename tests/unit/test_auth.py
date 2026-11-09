@@ -43,6 +43,30 @@ def test_fp_auth_1_registration_and_session_lifecycle(client):
     assert post(client, "/api/auth/login/", {"username": "ALICE", "password": PASSWORD}).status_code == 200
 
 
+def test_session_and_private_api_responses_are_not_stored(client):
+    csrf = client.get("/api/auth/csrf/")
+    anonymous = client.get("/api/candidate/resume/")
+    registered = post(client, "/api/auth/register/", registration())
+    private_resume = client.get("/api/candidate/resume/")
+    own_applications = client.get("/api/applications/")
+    assert [response.status_code for response in (csrf, anonymous, registered, private_resume, own_applications)] == [200, 401, 201, 200, 200]
+    for response in (csrf, anonymous, registered, private_resume, own_applications):
+        assert "no-store" in response.headers.get("Cache-Control", "")
+
+
+def test_optional_startup_seed_keeps_existing_demo_account_credentials():
+    existing = User.objects.create_user(
+        username="Candidate1", email="candidate1@example.test", password=PASSWORD,
+        role="Candidate", display_name="Existing profile",
+    )
+    call_command("seed_auth_demo", missing_only=True, stdout=StringIO())
+    existing.refresh_from_db()
+    assert existing.display_name == "Existing profile"
+    assert existing.check_password(PASSWORD)
+    assert User.objects.filter(username__iexact="candidate1").count() == 1
+    assert User.objects.get(username="candidate2").check_password("LocalDemo!2026")
+
+
 @pytest.mark.parametrize("changes", [
     {"username": "ab"}, {"email": "invalid"}, {"role": "Admin"},
     {"password": "12345678"}, {"password": "short"}, {"is_staff": True},
