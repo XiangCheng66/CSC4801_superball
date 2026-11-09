@@ -1,7 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { employerApi } from '../../api/employer';
+import { formatTime } from '../scheduling/time';
 
 const EMPTY_JOB = { title: '', description: '', skills: '' };
+const STATUSES = ['Pending', 'Interviewing', 'Rejected', 'Accepted'];
+const STATUS_LABELS = {
+  Pending: '待处理',
+  Interviewing: '面试中',
+  Rejected: '已拒绝',
+  Accepted: '已录用',
+};
 
 export function splitSkills(value) {
   return value
@@ -23,6 +31,11 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
   const [editing, setEditing] = useState(null);
   const [jobBusy, setJobBusy] = useState(false);
   const [jobResult, setJobResult] = useState({});
+  const [applicantsJob, setApplicantsJob] = useState(null);
+  const [applicants, setApplicants] = useState([]);
+  const [applicantsBusy, setApplicantsBusy] = useState(false);
+  const [applicantsResult, setApplicantsResult] = useState({});
+  const requestedJob = useRef(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -134,12 +147,59 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
       await employerApi.deleteJob(job.id);
       setJobs((current) => current.filter((row) => row.id !== job.id));
       if (editing?.id === job.id) setEditing(null);
+      if (applicantsJob === job.id) {
+        requestedJob.current = null;
+        setApplicantsJob(null);
+        setApplicants([]);
+      }
       setJobResult({ notice: `已删除「${job.title}」。` });
       onJobsChanged?.();
     } catch (failure) {
       handleFailure(failure, setJobResult);
     } finally {
       setJobBusy(false);
+    }
+  }
+
+  async function toggleApplicants(job) {
+    if (applicantsJob === job.id) {
+      requestedJob.current = null;
+      setApplicantsJob(null);
+      setApplicants([]);
+      setApplicantsResult({});
+      return;
+    }
+    requestedJob.current = job.id;
+    setApplicantsJob(job.id);
+    setApplicants([]);
+    setApplicantsResult({});
+    setApplicantsBusy(true);
+    try {
+      const rows = await employerApi.listApplicants(job.id);
+      if (requestedJob.current !== job.id) return; // A newer request owns the panel.
+      setApplicants(rows);
+    } catch (failure) {
+      if (requestedJob.current !== job.id) return;
+      if (failure.status === 401) onLoggedOut();
+      else setApplicantsResult({ error: failure.message });
+    } finally {
+      if (requestedJob.current === job.id) setApplicantsBusy(false);
+    }
+  }
+
+  async function changeStatus(row, status) {
+    if (applicantsBusy || status === row.status) return;
+    setApplicantsBusy(true);
+    setApplicantsResult({});
+    try {
+      const updated = await employerApi.updateApplicationStatus(row.id, status);
+      setApplicants((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setApplicantsResult({ notice: `已将「${row.display_name}」设为${STATUS_LABELS[status]}。` });
+    } catch (failure) {
+      if (failure.status === 401) onLoggedOut();
+      else setApplicantsResult({ error: failure.message });
+    } finally {
+      setApplicantsBusy(false);
     }
   }
 
@@ -270,6 +330,9 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
                     {job.required_skills.length ? `技能：${job.required_skills.join('、')}` : '无技能要求（匹配分 100）'}
                   </p>
                   <div className="row-actions">
+                    <button className="secondary" type="button" onClick={() => toggleApplicants(job)}>
+                      {applicantsJob === job.id ? '收起申请人' : '申请人'}
+                    </button>
                     <button
                       className="secondary"
                       type="button"
@@ -281,6 +344,50 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
                       删除
                     </button>
                   </div>
+                  {applicantsJob === job.id && (
+                    <div className="applicant-panel">
+                      <h4>申请人（{applicants.length}）</h4>
+                      {applicantsBusy && <p className="hint" role="status">正在处理…</p>}
+                      {applicantsResult.notice && <p className="notice" role="status">{applicantsResult.notice}</p>}
+                      {applicantsResult.error && <p className="error" role="alert">{applicantsResult.error}</p>}
+                      {!applicantsBusy && applicants.length === 0 && (
+                        <p className="hint">还没有人投递这个岗位。</p>
+                      )}
+                      {applicants.length > 0 && (
+                        <ul className="applicant-list" aria-label={`${job.title} 的申请人`}>
+                          {applicants.map((row) => (
+                            <li key={row.id}>
+                              <div className="applicant-line">
+                                <strong>{row.display_name}</strong>
+                                <span className="applicant-score">匹配分 {row.match_score}</span>
+                              </div>
+                              <p className="hint">
+                                {row.skills.length ? `技能：${row.skills.join('、')}` : '未填写技能'}
+                              </p>
+                              <p className="hint">
+                                {row.booking
+                                  ? `面试：${formatTime(row.booking.start_at)}（北京时间）`
+                                  : '尚未预约面试'}
+                              </p>
+                              <div className="applicant-status">
+                                <span className="hint">申请状态</span>
+                                <select
+                                  aria-label={`${row.display_name} 的申请状态`}
+                                  value={row.status}
+                                  disabled={applicantsBusy}
+                                  onChange={(event) => changeStatus(row, event.target.value)}
+                                >
+                                  {STATUSES.map((status) => (
+                                    <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </li>

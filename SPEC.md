@@ -61,6 +61,8 @@
 | GET/PUT | `/api/employer/company/` | 本人公司资料；首次 GET 为 404，PUT 新建 201/更新 200 |
 | GET/POST | `/api/employer/jobs/` | 本人岗位列表/创建 |
 | GET/PATCH/DELETE | `/api/employer/jobs/<id>/` | 所有权、部分更新、关联申请或时段时删除 409 |
+| GET | `/api/employer/jobs/<id>/applicants/` | 岗位申请人：身份、技能、匹配分、状态、预约；按匹配分降序 |
+| PATCH | `/api/employer/applications/<id>/status/` | 四态状态修改；仅岗位所有者，非所有者 403 |
 | GET/POST | `/api/slots/` | 本人时段列表/未来 30 分钟创建 |
 | GET | `/api/slots/jobs/` | 本人岗位选项 |
 | GET/DELETE | `/api/slots/<id>/` | 本人时段；已预约或已开始不能删除 |
@@ -80,6 +82,8 @@ React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作�
 字段、错误和共享边界见 [APPLICATION_CONTRACT.md](docs/APPLICATION_CONTRACT.md)。`applications.services.apply_to_job` 是唯一投递写入服务，验证 Candidate，在事务内锁定岗位、检查已有申请并使用模型 Pending 默认值创建；已有唯一约束负责最终防重。捕获完整回滚后的 IntegrityError，仅在确有重复记录时映射 409；其他故障继续抛出。资料、私有简历无需随申请提交，也不复制到申请。
 
 列表仅按会话候选人过滤，返回全部本人申请，按创建时间和整数 ID 降序。详情先认证/角色再查对象和所有权，401/403/404 可区分；本人 PUT/PATCH/DELETE 为 405。POST 只接受整数 job_id，拒绝所有者、状态等额外字段并执行 CSRF。预加载岗位/公司/技能和 Booking/slot，显式输出字段白名单；现有预约在状态变化后继续展示，不提供候选人改状态或预约创建入口。无模型和迁移变更，旧账号可直接使用。
+
+雇主在自己的岗位下点"申请人"展开面板：每行显示候选人显示名、技能、匹配分、申请状态与已预约的面试时间（北京时间），状态下拉可在 `Pending/Interviewing/Rejected/Accepted` 间修改，失败时保留原值并提示。面板只显示公开字段，简历、邮箱与密码哈希不进入该响应。
 
 ## Matching Algorithm and Skill Storage
 
