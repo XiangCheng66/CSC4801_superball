@@ -45,4 +45,9 @@ test('employer reviews ranked applicants and changes a status', async ({ page })
   await page.locator('li').filter({ hasText: '[DEMO-A2] Backend Developer' })
     .getByRole('button', { name: '申请人', exact: true }).click();
   await expect(page.getByLabel('Demo Candidate 3 的申请状态')).toHaveValue('Accepted');
+  // Restore the seeded status for the separate booking contention test.
+  const restored = await page.request.patch(`/api/employer/applications/${target.id}/status/`, {
+    data: { status: target.status }, headers: { 'X-CSRFToken': csrf },
+  });
+  expect(restored.status()).toBe(200);
 });

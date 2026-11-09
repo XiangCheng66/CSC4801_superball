@@ -1,8 +1,8 @@
-# Project Specification — A Day 3 on A/B/C Day 2
+# Project Specification — A/B/C Day 3 integration
 
 ## Product Scope
 
-已实现账号、求职者资料/私有简历/全部岗位推荐、投递与本人申请、公司资料、雇主岗位 CRUD 与未来时段管理。三个模块在同一 Django 应用和按角色分配的 React 工作台集成。雇主申请人查询/状态管理、候选人预约创建与冲突处理仍待实现。
+已实现账号、求职者资料/私有简历/全部岗位推荐、投递与本人申请、公司资料、雇主岗位 CRUD 与未来时段管理。三个模块在同一 Django 应用和按角色分配的 React 工作台集成。已接通雇主申请人查询/状态管理、候选人预约创建与原子冲突处理。
 
 ## Architecture
 
@@ -24,7 +24,7 @@
 - `Job` 通过 `employer` 外键指向 `accounts.User`（不是 CompanyProfile），标题与描述非空；`RequiredSkill` 为子表，同一岗位内技能名不区分大小写唯一，岗位可以没有技能。
 - `Application` 关联 `Job` 与候选人账号，`UNIQUE(job, candidate)` 阻止重复投递；`job` 外键使用 `PROTECT`，使带申请的岗位无法被删除并在接口层映射为 `409`；`status` 由 `CHECK` 约束限定为 `Pending/Interviewing/Rejected/Accepted`。
 
-`candidates.CandidateProfile` 以 User ID 为主键，保存技能 JSON、私有 resume_text 与时间戳，显示名仍在 User。旧账号 GET 返回空资料，首次 PUT 创建记录；两写接口锁 User 并只更新各自字段。`scheduling.InterviewSlot` 关联 Job（PROTECT），数据库 CHECK 限制恰好 30 分钟；所有者由 job.employer 派生。最小 Booking 的 slot/application 分别 OneToOne+PROTECT，仅实现存储和保护，完整预约服务尚未实现。
+`candidates.CandidateProfile` 以 User ID 为主键，保存技能 JSON、私有 resume_text 与时间戳，显示名仍在 User。旧账号 GET 返回空资料，首次 PUT 创建记录；两写接口锁 User 并只更新各自字段。`scheduling.InterviewSlot` 关联 Job（PROTECT），数据库 CHECK 限制恰好 30 分钟；所有者由 job.employer 派生。最小 Booking 的 slot/application 分别 OneToOne+PROTECT，由预约事务服务使用，详见 [预约契约](docs/BOOKING_CONTRACT.md)。
 
 ## Authentication and Authorization
 
@@ -63,6 +63,11 @@
 | GET/PATCH/DELETE | `/api/employer/jobs/<id>/` | 所有权、部分更新、关联申请或时段时删除 409 |
 | GET | `/api/employer/jobs/<id>/applicants/` | 岗位申请人：身份、技能、匹配分、状态、预约；按匹配分降序 |
 | PATCH | `/api/employer/applications/<id>/status/` | 四态状态修改；仅岗位所有者，非所有者 403 |
+| GET | `/api/employer/jobs/<id>/applicants/` | 本人岗位的申请人与匹配排序 |
+| PATCH | `/api/employer/applications/<id>/status/` | 修改本人岗位的申请状态 |
+| GET | `/api/booking-applications/`、`/api/booking-applications/<id>/slots/` | 本人合资格申请与可约时段 |
+| GET/POST | `/api/bookings/` | 本人预约列表 / Candidate 创建 |
+| GET | `/api/bookings/<id>/` | 预约详情及角色/所有权校验 |
 | GET/POST | `/api/slots/` | 本人时段列表/未来 30 分钟创建 |
 | GET | `/api/slots/jobs/` | 本人岗位选项 |
 | GET/DELETE | `/api/slots/<id>/` | 本人时段；已预约或已开始不能删除 |
@@ -81,7 +86,7 @@ React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作�
 
 字段、错误和共享边界见 [APPLICATION_CONTRACT.md](docs/APPLICATION_CONTRACT.md)。`applications.services.apply_to_job` 是唯一投递写入服务，验证 Candidate，在事务内锁定岗位、检查已有申请并使用模型 Pending 默认值创建；已有唯一约束负责最终防重。捕获完整回滚后的 IntegrityError，仅在确有重复记录时映射 409；其他故障继续抛出。资料、私有简历无需随申请提交，也不复制到申请。
 
-列表仅按会话候选人过滤，返回全部本人申请，按创建时间和整数 ID 降序。详情先认证/角色再查对象和所有权，401/403/404 可区分；本人 PUT/PATCH/DELETE 为 405。POST 只接受整数 job_id，拒绝所有者、状态等额外字段并执行 CSRF。预加载岗位/公司/技能和 Booking/slot，显式输出字段白名单；现有预约在状态变化后继续展示，不提供候选人改状态或预约创建入口。无模型和迁移变更，旧账号可直接使用。
+列表仅按会话候选人过滤，返回全部本人申请，按创建时间和整数 ID 降序。详情先认证/角色再查对象和所有权，401/403/404 可区分；本人 PUT/PATCH/DELETE 为 405。POST 只接受整数 job_id，拒绝所有者、状态等额外字段并执行 CSRF。预加载岗位/公司/技能和 Booking/slot，显式输出字段白名单；现有预约在状态变化后继续展示，申请接口为只读详情，预约在独立面板创建。无模型和迁移变更，旧账号可直接使用。
 
 雇主在自己的岗位下点"申请人"展开面板：每行显示候选人显示名、技能、匹配分、申请状态与已预约的面试时间（北京时间），状态下拉可在 `Pending/Interviewing/Rejected/Accepted` 间修改，失败时保留原值并提示。面板只显示公开字段，简历、邮箱与密码哈希不进入该响应。
 
@@ -95,11 +100,11 @@ React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作�
 
 两端评分调用同一函数。职位排序按分数降序、标题 casefold、整数职位 ID；申请人排序按分数降序、显示名 casefold、整数求职者 User ID（不是申请 ID）。返回新列表和浅拷贝行，保留其他字段并覆盖旧分数，不修改输入。A 负责提供全部当前职位；B 负责提供已授权职位的申请人；调用方负责筛选公开输出字段，严禁泄露简历。
 
-A 的 RecommendationsView 查询全部实际存在的 Job，预加载雇主公司与岗位技能，再调用 rank_jobs，不分页、不丢弃零分岗位。公司不存在时使用雇主显示名，再回退用户名。响应字段白名单见求职者契约。统一 seed_demo 的三个候选人与岗位覆盖 100/50/0/空要求 100，并提供四种申请状态；B 的申请人接口仍待补。
+A 的 RecommendationsView 查询全部实际存在的 Job，预加载雇主公司与岗位技能，再调用 rank_jobs，不分页、不丢弃零分岗位。公司不存在时使用雇主显示名，再回退用户名。响应字段白名单见求职者契约。统一 seed_demo 的三个候选人与岗位覆盖 100/50/0/空要求 100，并提供四种申请状态；B 的申请人列表使用相同匹配函数。
 
 ## Interview Scheduling and Booking Transaction
 
-C 已实现雇主时段列表、未来 30 分钟创建、仅本人删除、已预约/已开始删除拒绝与可用筛选。API 接受明确时区、输出 UTC，UI 固定 Asia/Shanghai。创建事务锁 Job，删除锁 InterviewSlot；真实时段使 B 的岗位删除返回 409。Booking 目前仅提供存储和约束；FP-SCHED-2/3 的完整资格、预约入口与原子竞争仍待实现。
+C 已实现雇主时段列表、未来 30 分钟创建、仅本人删除、已预约/已开始删除拒绝与可用筛选。API 接受明确时区、输出 UTC，UI 固定 Asia/Shanghai。创建事务锁 Job，删除锁 InterviewSlot；真实时段使 B 的岗位删除返回 409。C Day 3 已实现 FP-SCHED-2/3：先锁申请再锁时段，在锁内检查归属、同一雇主、Interviewing、未来与无预约；唯一约束兜底。事务回滚后区分真实预约冲突，争抢时段返回 409 和 `Slot already booked`。双方查询保留状态改变后的预约，见 [预约契约](docs/BOOKING_CONTRACT.md)。
 
 ## Security Controls
 
@@ -115,7 +120,7 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 ## Design Decisions and Limitations
 
-当前在 A/B/C Day 2 上完成 A Day 3 的投递/本人申请，保留跨模块发布岗位→推荐→时段→删除保护回归。剩余 4 项占位属于雇主申请人/状态及候选人预约/竞争。各分支交接为历史状态，当前情况以本文与最新交接为准。
+三分支联调覆盖发布岗位→投递→Interviewing→预约→双方查看，及状态改变后保留预约。SQLite 跳过两项 PostgreSQL 专有并发用例。
 
 数据库/API 使用 UTC，时段与申请预约 UI 使用北京时间 Asia/Shanghai。构建与测试见 docs/A_DAY3_HANDOFF.md。B 的统一 seed_demo 会重置业务库并重建完整演示数据；增量命令和 --no-reset 用法见 docs/DEMO_DATA.md。
 

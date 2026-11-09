@@ -1,4 +1,4 @@
-"""Availability and booking storage. Booking creation is a later workflow."""
+"""Availability and booking storage; writes are governed by booking_services."""
 from datetime import timedelta
 
 from django.db import models
@@ -36,10 +36,10 @@ class InterviewSlot(models.Model):
 
 
 class Booking(models.Model):
-    """Persistence/guards only; no candidate booking endpoint exists on Day 2.
+    """One booking per application and per slot, backed by unique constraints.
 
-    The future booking service must enforce ownership, employer, status and
-    future-time eligibility in a transaction; database uniqueness alone does not.
+    The booking service enforces ownership, employer, status and
+    future-time eligibility in a transaction; uniqueness is the final guard.
     """
     slot = models.OneToOneField(InterviewSlot, on_delete=models.PROTECT, related_name="booking")
     application = models.OneToOneField(

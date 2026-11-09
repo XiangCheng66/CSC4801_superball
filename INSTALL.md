@@ -1,6 +1,6 @@
 # Installation Guide
 
-当前可运行账号、资料/私有简历/岗位推荐、投递与本人申请、公司/岗位管理与雇主面试时段。雇主申请人/状态和候选人预约创建仍待实现；统一 seed_demo 已提供完整业务重置和演示数据。
+当前可运行账号、资料/私有简历/岗位推荐、投递与本人申请、公司/岗位管理与雇主面试时段。雇主申请人/状态和候选人预约创建已接通；统一 seed_demo 已提供完整业务重置和演示数据。
 
 ## Prerequisites and Versions
 
@@ -166,7 +166,7 @@ npm run build
 .venv/bin/python -m pytest tests/unit/test_matching.py -v
 ```
 
-资料/推荐、投递与本人申请、公司/岗位和时段管理均有真实用例；尚未实现的雇主申请人/状态及候选人预约共 4 项占位明确 skipped，不是通过的需求。
+资料/推荐、投递与本人申请、公司/岗位和时段管理均有真实用例；SQLite 仅跳过两项 PostgreSQL 行锁并发测试，PostgreSQL 跑完整套件。
 
 ## Continuous Integration
 
@@ -202,7 +202,7 @@ npm.cmd run test:e2e
 
 沿用现有环境、依赖和迁移，已有账号无需重置。本地演示可执行 `python manage.py seed_demo`（会重置演示业务数据）；以 `candidate3 / LocalDemo!2026` 登录，在岗位推荐给 `[DEMO-A2] Generalist` 投递，切换“我的申请”查看 Pending，再刷新页面确认仍在。回到推荐，已投递岗位显示当前状态，不能重复投递。
 
-candidate1/2/3 可查看统一 seed 的四种申请状态。已有 Booking 时显示其时段和北京时间，状态后来改变也继续显示；当前 seed 不创建预约，候选人预约创建由 C 后续实现。接口、权限和 B/C 接入见 [申请契约](docs/APPLICATION_CONTRACT.md)，验证与剩余范围见 [A Day 3 交接](docs/A_DAY3_HANDOFF.md)。
+candidate1/2/3 可查看统一 seed 的四种申请状态。已有 Booking 时显示其时段和北京时间，状态后来改变也继续显示；当前 seed 不创建预约，可从面试预约入口为合资格申请选时段。接口、权限和 B/C 接入见 [申请契约](docs/APPLICATION_CONTRACT.md)，验证与剩余范围见 [A Day 3 交接](docs/A_DAY3_HANDOFF.md)。
 
 单独验证：`python -m pytest tests/unit/test_applications.py tests/unit/test_workflows.py -q -ra`。完整测试命令保持不变。
 
@@ -227,6 +227,6 @@ python manage.py seed_demo
 
 Compose 对应命令为 `docker compose exec -T app python manage.py seed_demo`。它在 employer1 的 `[Local demo] Interview availability` 岗位下添加北京时间明天 09:00、09:30 两个时段，并同时重建公司、岗位、申请等演示数据（会清空业务行）。只补时段而不清库时用 `python manage.py seed_availability_demo`。employer2 看不到 employer1 的岗位/时段。
 
-雇主登录后的工作台同时显示公司/岗位和时段。发布、编辑或删除岗位会自动刷新时段选择；时段 UI 固定北京时间，API 使用 UTC。有时段的岗位删除返回 409，先删除允许删除的时段后才能删除岗位。候选人预约入口尚未实现。
+雇主登录后的工作台同时显示公司/岗位和时段。发布、编辑或删除岗位会自动刷新时段选择；时段 UI 固定北京时间，API 使用 UTC。有时段的岗位删除返回 409，先删除允许删除的时段后才能删除岗位。求职者可从“面试预约”选择本人 Interviewing 申请。
 
 单独测试：`python -m pytest tests/unit/test_scheduling.py -q -ra`。完整整合验证见 [Day 2 集成记录](docs/DAY2_INTEGRATION.md)。

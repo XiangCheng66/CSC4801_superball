@@ -4,6 +4,7 @@ import App from './App';
 import { authApi } from './api/auth';
 import { ApiError } from './api/client';
 import { employerApi } from './api/employer';
+import { bookingApi } from './api/bookings';
 import { availabilityApi } from './api/scheduling';
 import { candidateApi } from './api/candidate';
 
@@ -11,10 +12,12 @@ vi.mock('./api/auth', () => ({ authApi: { me: vi.fn(), login: vi.fn(), register:
 vi.mock('./api/candidate', () => ({ candidateApi: { profile: vi.fn(), resume: vi.fn(), saveProfile: vi.fn() } }));
 vi.mock('./api/employer', () => ({ employerApi: { getCompany: vi.fn(), listJobs: vi.fn(), saveCompany: vi.fn(), createJob: vi.fn(), updateJob: vi.fn(), deleteJob: vi.fn() } }));
 vi.mock('./api/scheduling', () => ({ availabilityApi: { jobs: vi.fn(), list: vi.fn(), create: vi.fn(), remove: vi.fn() } }));
+vi.mock('./api/bookings', () => ({ bookingApi: { list: vi.fn() } }));
 const user = { id: 1, username: 'alice', email: 'alice@example.test', display_name: 'Alice', role: 'Candidate' };
 
 beforeEach(() => {
   vi.resetAllMocks();
+  bookingApi.list.mockResolvedValue([]);
   employerApi.getCompany.mockRejectedValue(new ApiError('Not found', { status: 404 }));
   employerApi.listJobs.mockResolvedValue([]);
   availabilityApi.jobs.mockResolvedValue([]);

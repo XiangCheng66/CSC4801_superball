@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { candidateApi } from '../../api/candidate';
 import { applicationApi } from '../../api/applications';
 import AccountHome from '../../components/AccountHome';
+import BookingPanel from '../scheduling/BookingPanel';
 import Applications, { ApplicationStatus, ApplyButton } from './Applications';
 
 function FieldError({ fields, name, id }) {
@@ -158,10 +159,12 @@ export default function CandidateWorkspace({ user, onUserChanged, onLoggedOut })
         <button className={tab === 'profile' ? 'active' : ''} aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}>个人资料</button>
         <button className={tab === 'jobs' ? 'active' : ''} aria-pressed={tab === 'jobs'} onClick={() => setTab('jobs')}>岗位推荐</button>
         <button className={tab === 'applications' ? 'active' : ''} aria-pressed={tab === 'applications'} onClick={() => setTab('applications')}>我的申请</button>
+        <button className={tab === 'bookings' ? 'active' : ''} aria-pressed={tab === 'bookings'} onClick={() => setTab('bookings')}>面试预约</button>
       </nav>
       <div hidden={tab !== 'profile'}><ProfileEditor onUserChanged={onUserChanged} onLoggedOut={onLoggedOut} onSkillsSaved={() => setRevision((value) => value + 1)} /></div>
       {tab === 'jobs' && <Recommendations revision={revision} onLoggedOut={onLoggedOut} />}
       {tab === 'applications' && <Applications onLoggedOut={onLoggedOut} onBrowseJobs={() => setTab('jobs')} />}
+      {tab === 'bookings' && <BookingPanel role="Candidate" onLoggedOut={onLoggedOut} />}
     </section>
   </div>;
 }

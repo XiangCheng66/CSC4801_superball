@@ -1,6 +1,6 @@
 # 公共 API 与请求约定（A / Day 1）
 
-这是 A/B/C 共同使用的基础契约。以下认证和雇主公司/岗位接口已经实现；C 的雇主时段接口见 [时段契约](SCHEDULING_CONTRACT.md)。A Day 3 的投递、本人申请列表和详情见 [申请契约](APPLICATION_CONTRACT.md)；候选人预约创建仍待 C 实现。
+这是 A/B/C 共同使用的基础契约。投递和本人申请见 [申请契约](APPLICATION_CONTRACT.md)，雇主申请人及改状态见 [申请人契约](APPLICANT_CONTRACT.md)，时段和预约见 [时段契约](SCHEDULING_CONTRACT.md) 与 [预约契约](BOOKING_CONTRACT.md)。
 
 ## 请求与响应
 

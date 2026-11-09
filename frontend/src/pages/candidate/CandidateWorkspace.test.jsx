@@ -4,6 +4,7 @@ import App from '../../App';
 import { authApi } from '../../api/auth';
 import { candidateApi } from '../../api/candidate';
 import { applicationApi } from '../../api/applications';
+import { bookingApi } from '../../api/bookings';
 import { ApiError } from '../../api/client';
 import { employerApi } from '../../api/employer';
 import { availabilityApi } from '../../api/scheduling';
@@ -13,6 +14,7 @@ vi.mock('../../api/candidate', () => ({ candidateApi: {
   profile: vi.fn(), resume: vi.fn(), saveProfile: vi.fn(), saveResume: vi.fn(), recommendations: vi.fn(),
 } }));
 vi.mock('../../api/applications', () => ({ applicationApi: { list: vi.fn(), apply: vi.fn() } }));
+vi.mock('../../api/bookings', () => ({ bookingApi: { list: vi.fn() } }));
 
 vi.mock('../../api/employer', () => ({ employerApi: { getCompany: vi.fn(), listJobs: vi.fn(), saveCompany: vi.fn(), createJob: vi.fn(), updateJob: vi.fn(), deleteJob: vi.fn() } }));
 vi.mock('../../api/scheduling', () => ({ availabilityApi: { jobs: vi.fn(), list: vi.fn(), create: vi.fn(), remove: vi.fn() } }));
@@ -30,6 +32,7 @@ beforeEach(() => {
   candidateApi.resume.mockResolvedValue({ user_id: 1, resume_text: 'Saved private resume' });
   candidateApi.recommendations.mockResolvedValue([job]);
   applicationApi.list.mockResolvedValue([]);
+  bookingApi.list.mockResolvedValue([]);
 });
 
 it('saves profile using server-normalized values, updates account identity and refreshes recommendation scores', async () => {
