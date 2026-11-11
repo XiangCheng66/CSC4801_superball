@@ -266,6 +266,7 @@ Supporting documents linked below retain their existing language; this change pr
 ## Known Limitations
 
 - Accounts, profiles/private resumes/recommendations, applications/own application lists, company/job management, employer slots, applicant/status management and candidate bookings are implemented. Optional AI functionality is not enabled.
+- The interface switches between Chinese and English from the header (default Chinese, choice kept in `localStorage`). Product names, role values, application status values, job titles, company names and skills are not translated; network-level fallback errors remain Chinese.
 - See A's final handoff for current build/verification evidence. CI runs backend tests and frontend tests/builds; Docker and browsers are also verified locally.
 - `python manage.py seed_demo` resets and populates the full demo dataset (five accounts, two companies, four jobs, four application statuses and two contested slots). `seed_auth_demo`, `seed_candidate_demo` and `seed_availability_demo` are incremental commands.
 - Shared authentication, candidate APIs, employer models and matching contracts are established. Remote verification is available in Actions. Future features must continue to reuse authorization checks and public-field allowlists.
