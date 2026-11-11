@@ -1,6 +1,8 @@
-# CSC4801 Superball — Recruiting and Candidate Matching
+# CSC4801 Superball — 招聘与求职者匹配
 
-## Project Overview
+**中文** | [English](README.en.md)
+
+## 项目概览
 
 本项目是 CSC4801 期末项目：构建一个可在本地运行的招聘与求职者匹配平台。应用包含且仅包含 `Candidate`（求职者）和 `Employer`（雇主）两种业务角色。
 
@@ -15,7 +17,7 @@
 
 **当前阶段：A/B/C Day 3 联调验收。** A 完成账号、资料、私有简历、推荐、投递与本人申请；B 完成公司、岗位、申请人排序与状态管理；C 完成时段与预约原子性。完整主流程已在同一工作台接入。
 
-## Team Members
+## 团队成员
 
 - JeRant
 - Isochiot
@@ -23,7 +25,7 @@
 
 A 已由 XiangCheng66 认领；C 职责已认领，成员姓名对应与 B 的实际负责人由团队补充。
 
-## Architecture Summary
+## 架构概览
 
 ### 技术方案
 
@@ -68,10 +70,11 @@ CSC4801_superball/
 ├── Dockerfile
 ├── SPEC.md
 ├── INSTALL.md
-└── README.md
+├── README.md                   # 中文
+└── README.en.md                # English
 ```
 
-## Team Responsibilities
+## 团队分工
 
 每个人负责所属模块的 React 页面、Python API、单元测试和文档。所有成员都需要理解完整业务流程，并能解释和修改提交的代码。
 
@@ -95,7 +98,7 @@ CSC4801_superball/
 - C 的预约模块使用已认证身份和 B 的申请数据；仍需自行验证对象所有权与预约资格。
 - 公共请求函数、登录状态管理、错误格式与路由入口在第一天统一。各模块的角色和所有权检查必须在后端执行。
 
-## Shared Contracts
+## 共享契约
 
 ### 开工前共同确认
 
@@ -129,7 +132,7 @@ CSC4801_superball/
 - 使用安全 ORM/参数化查询、HTML 转义及隔离测试数据。测试不得调用真实第三方服务，涉及数据库的测试使用隔离测试库。
 - AI 解释属于后续可选增强，不得改变规定的分数或排序；核心系统和测试须能在没有付费凭证时运行。
 
-## Development Plan
+## 开发计划
 
 ### 第一周计划
 
@@ -153,7 +156,7 @@ CSC4801_superball/
 - 第 11 周功能冻结；第 12 周按课程审计规则审查、修复并记录回归证据；第 13～14 周展示。具体日期以课程发布为准。
 - 最终提交公开仓库 `main` 上确切 commit 的永久 URL，并确保同一 commit 的 Dockerfile 和文档化启动、seed、测试流程可复现。
 
-## Quick Start
+## 快速开始
 
 当前可先获取仓库：
 
@@ -175,7 +178,7 @@ docker compose exec -T app python manage.py seed_demo
 
 访问 `http://127.0.0.1:8000`。本机开发按 INSTALL.md 建立 PostgreSQL、运行迁移和演示 seed，分别启动 Python 后端（8000）与 React 前端（5173）。求职者工作台包含个人资料、岗位推荐、我的申请和面试预约。雇主工作台包含公司、岗位、申请人、面试时段和预约记录。
 
-## Demo Accounts
+## 演示账号
 
 执行 `python manage.py seed_demo` 后可使用以下公开的 **local/demo** 账号：
 
@@ -190,7 +193,7 @@ docker compose exec -T app python manage.py seed_demo
 
 三个求职者技能为 Python/SQL、Python、Rust，对要求 Python/SQL 的 `[DEMO-A2] Backend Developer` 得分 100/50/0，对空要求岗位均为 100。candidate1 与 candidate3 的申请均为 `Interviewing` 且同属 employer1，可争抢同一时段。岗位标题是 e2e 的定位依据，改动需同步 Playwright。
 
-## Running Unit Tests
+## 运行单元测试
 
 安装锁定依赖后，在仓库根目录使用虚拟环境的 Python 执行：
 
@@ -206,11 +209,11 @@ python -m pytest tests/unit -v
 
 覆盖成功、输入校验、权限和冲突情形，特别检查 `401/403/404`、技能归一化与两端同分排序、越权、SQL 绑定值、XSS 转义及预约冲突。课程只要求单元测试；数据库原子性仍需通过实现和运行环境验证。
 
-## Requirement–Test Mapping
+## 需求与测试映射
 
 **下表记录当前实现和验证。** 必需工作流已接通；AI 增强为可选项。
 
-| Requirement ID | 负责人 / 行为 | 实现文件或位置（规划） | Unit test(s) / verification evidence（待完成） |
+| 需求编号 | 负责人 / 行为 | 实现文件或位置 | 单元测试 / 验证证据 |
 |---|---|---|---|
 | FP-ARCH-1 | 全员：认证、投递、申请人管理与预约贯通 | `frontend/`、`backend/`、`Dockerfile`、`compose.yaml` | `frontend/e2e/hiring-flow.spec.js` 覆盖完整招聘流程 |
 | FP-AUTH-1 | A：已实现注册、登录、退出、唯一标识 | `backend/accounts/models.py`、`serializers.py`、`views.py` | `tests/unit/test_auth.py::test_fp_auth_1_registration_and_session_lifecycle`；`test_fp_auth_1_invalid_registration`；`test_duplicate_account_is_rejected_case_insensitively`（同文件） |
@@ -238,11 +241,11 @@ python -m pytest tests/unit -v
 | FP-TEST-1 | 账号、求职者、雇主与预约流程均有具名测试 | `tests/unit/`、前端测试、CI | PostgreSQL 执行完整套件，包括两个并发预约用例。SQLite 跳过这两个用例 |
 | FP-SUB-1 | 全员：确切 main commit 与完整 Docker 环境 | Git、`Dockerfile`、`INSTALL.md` | 在提交 commit 验证构建、依赖启动、迁移、seed、测试与 UI |
 
-## Document Index
+## 文档索引
 
 | 文档 | 用途 | 当前状态 |
 |---|---|---|
-| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | A/B/C Day 3 整合 |
+| [中文版](README.md) / [English](README.en.md) | 项目概览、分工、启动计划与需求映射 | A/B/C Day 3 整合 |
 | [SPEC.md](SPEC.md) | 架构、模型、权限、API、匹配、预约事务与安全设计 | 认证、求职者资料/推荐、雇主模型与 CI 已记录 |
 | [INSTALL.md](INSTALL.md) | 精确安装、启动、迁移、seed、测试和 Docker 指令 | 已提供基础运行方式 |
 | [Day 2 集成记录](docs/DAY2_INTEGRATION.md) | 三分支来源、集成调整和验证 | 历史验收 |
@@ -262,7 +265,7 @@ python -m pytest tests/unit -v
 | [Dockerfile](Dockerfile) / [compose.yaml](compose.yaml) | React/Python 构建和 PostgreSQL 环境 | 构建与容器验证记录见 A Day 2 交接 |
 | [课程项目页](https://sra-research.github.io/CSC4801/project.html) | 课程项目与审计安排 | 结合教师公布的最新要求核对 |
 
-## Known Limitations
+## 已知限制
 
 - 已完成账号、资料/私有简历/推荐、投递/本人申请、公司/岗位管理与雇主时段管理、雇主申请人/状态与候选人预约。可选 AI 功能未启用。
 - 当前版本的构建与验证见 A 收尾交接；CI 执行后端测试、前端测试/构建，本地另验 Docker 与浏览器。
