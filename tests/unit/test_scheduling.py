@@ -237,15 +237,3 @@ def test_demo_seed_requires_auth_users():
     with pytest.raises(CommandError):
         call_command('seed_availability_demo', stdout=StringIO())
     assert not InterviewSlot.objects.exists()
-
-
-def test_fp_sched_2_eligible_booking():
-    pytest.skip('C: candidate booking endpoint and eligibility service pending')
-
-
-def test_fp_sched_2_ineligible_booking():
-    pytest.skip('C: candidate booking endpoint and eligibility service pending')
-
-
-def test_fp_sched_3_conflict_contract():
-    pytest.skip('C: transactional booking contention service pending')

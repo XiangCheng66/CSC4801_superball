@@ -3,6 +3,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import App from '../../App';
 import { authApi } from '../../api/auth';
 import { candidateApi } from '../../api/candidate';
+import { applicationApi } from '../../api/applications';
+import { bookingApi } from '../../api/bookings';
 import { ApiError } from '../../api/client';
 import { employerApi } from '../../api/employer';
 import { availabilityApi } from '../../api/scheduling';
@@ -11,6 +13,8 @@ vi.mock('../../api/auth', () => ({ authApi: { me: vi.fn(), logout: vi.fn(), work
 vi.mock('../../api/candidate', () => ({ candidateApi: {
   profile: vi.fn(), resume: vi.fn(), saveProfile: vi.fn(), saveResume: vi.fn(), recommendations: vi.fn(),
 } }));
+vi.mock('../../api/applications', () => ({ applicationApi: { list: vi.fn(), apply: vi.fn() } }));
+vi.mock('../../api/bookings', () => ({ bookingApi: { list: vi.fn() } }));
 
 vi.mock('../../api/employer', () => ({ employerApi: { getCompany: vi.fn(), listJobs: vi.fn(), saveCompany: vi.fn(), createJob: vi.fn(), updateJob: vi.fn(), deleteJob: vi.fn() } }));
 vi.mock('../../api/scheduling', () => ({ availabilityApi: { jobs: vi.fn(), list: vi.fn(), create: vi.fn(), remove: vi.fn() } }));
@@ -27,6 +31,8 @@ beforeEach(() => {
   candidateApi.profile.mockResolvedValue({ user_id: 1, display_name: 'Alice', skills: ['python'] });
   candidateApi.resume.mockResolvedValue({ user_id: 1, resume_text: 'Saved private resume' });
   candidateApi.recommendations.mockResolvedValue([job]);
+  applicationApi.list.mockResolvedValue([]);
+  bookingApi.list.mockResolvedValue([]);
 });
 
 it('saves profile using server-normalized values, updates account identity and refreshes recommendation scores', async () => {
@@ -161,4 +167,112 @@ it('keeps employer account controls without loading candidate-only resources', a
   expect(screen.getByRole('button', { name: '退出登录' })).toBeVisible();
   expect(screen.queryByRole('button', { name: '岗位推荐', exact: true })).not.toBeInTheDocument();
   expect(candidateApi.profile).not.toHaveBeenCalled();
+});
+
+const application = { id: 12, job, status: 'Pending', booking: null };
+
+it('applies once, shows the returned Pending status and reloads the application in the own-list tab', async () => {
+  let finish;
+  applicationApi.apply.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  applicationApi.list.mockResolvedValueOnce([]).mockResolvedValueOnce([application]);
+  render(<App />);
+  await screen.findByLabelText('技术技能');
+  fireEvent.click(screen.getByRole('button', { name: '岗位推荐', exact: true }));
+  const apply = await screen.findByRole('button', { name: '投递岗位', exact: true });
+  fireEvent.click(apply);
+  expect(screen.getByRole('button', { name: '正在投递…' })).toBeDisabled();
+  fireEvent.click(apply);
+  expect(applicationApi.apply).toHaveBeenCalledTimes(1);
+  expect(applicationApi.apply).toHaveBeenCalledWith(7);
+  await act(async () => { finish(application); });
+  expect(await screen.findByText('Pending · 待处理')).toBeVisible();
+  expect(screen.queryByRole('button', { name: '投递岗位', exact: true })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '我的申请', exact: true }));
+  expect(await screen.findByText('申请编号 #12')).toBeVisible();
+  expect(screen.getByText('Demo Company')).toBeVisible();
+  expect(screen.getByText('尚无面试预约。')).toBeVisible();
+});
+
+it('reconciles a stale duplicate conflict with the actual server application without retrying the write', async () => {
+  applicationApi.list.mockResolvedValueOnce([]).mockResolvedValueOnce([{ ...application, status: 'Accepted' }]);
+  applicationApi.apply.mockRejectedValue(new ApiError('Already applied', { status: 409, code: 'application_conflict' }));
+  render(<App />);
+  await screen.findByLabelText('技术技能');
+  fireEvent.click(screen.getByRole('button', { name: '岗位推荐', exact: true }));
+  fireEvent.click(await screen.findByRole('button', { name: '投递岗位', exact: true }));
+  expect(await screen.findByText('Accepted · 已录用')).toBeVisible();
+  expect(screen.getByText('你已投递过该岗位。')).toBeVisible();
+  expect(applicationApi.apply).toHaveBeenCalledTimes(1);
+});
+
+it('keeps a failed application retryable and handles a deleted posting through a read refresh', async () => {
+  applicationApi.apply.mockRejectedValueOnce(new ApiError('Network unavailable')).mockRejectedValueOnce(new ApiError('Missing', { status: 404 }));
+  candidateApi.recommendations.mockResolvedValueOnce([job]).mockResolvedValueOnce([]);
+  render(<App />);
+  await screen.findByLabelText('技术技能');
+  fireEvent.click(screen.getByRole('button', { name: '岗位推荐', exact: true }));
+  fireEvent.click(await screen.findByRole('button', { name: '投递岗位', exact: true }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Network unavailable');
+  expect(screen.getByRole('button', { name: '投递岗位', exact: true })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: '投递岗位', exact: true }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('该岗位已不存在，请刷新岗位列表。');
+  fireEvent.click(screen.getByRole('button', { name: '刷新岗位' }));
+  expect(await screen.findByText('暂时没有岗位，之后再来看看。')).toBeVisible();
+  expect(applicationApi.apply).toHaveBeenCalledTimes(2);
+});
+
+it('shows all four statuses and retains a booking after its application leaves Interviewing, escaping text', async () => {
+  const unsafe = '<script>alert(1)</script>';
+  applicationApi.list.mockResolvedValue(['Pending', 'Interviewing', 'Rejected', 'Accepted'].map((status, index) => ({
+    ...application, id: index + 1, status, job: { ...job, title: index === 2 ? unsafe : status, company: unsafe, description: unsafe },
+    booking: index === 2 ? { id: 23, slot_id: 45, start_at: '2026-11-04T01:00:00Z', end_at: '2026-11-04T01:30:00Z' } : null,
+  })));
+  render(<App />);
+  await screen.findByLabelText('技术技能');
+  fireEvent.click(screen.getByRole('button', { name: '我的申请', exact: true }));
+  expect(await screen.findByText('Pending · 待处理')).toBeVisible();
+  expect(screen.getByText('Interviewing · 面试中')).toBeVisible();
+  expect(screen.getByText('Rejected · 已拒绝')).toBeVisible();
+  expect(screen.getByText('Accepted · 已录用')).toBeVisible();
+  expect(screen.getByText('预约编号 #23 · 时段 #45')).toBeVisible();
+  expect(screen.getByText(/2026\/11\/04 09:00 ～ 2026\/11\/04 09:30/)).toBeVisible();
+  expect(screen.getByText('北京时间（UTC+8）')).toBeVisible();
+  expect(screen.getByRole('heading', { name: unsafe })).toBeVisible();
+  expect(document.querySelector('script')).toBeNull();
+  expect(screen.queryByRole('combobox')).toBeNull();
+});
+
+it('retries the own-list read, supports an empty state and refreshes a changed status', async () => {
+  applicationApi.list.mockRejectedValueOnce(new ApiError('Applications unavailable')).mockResolvedValueOnce([]).mockResolvedValueOnce([{ ...application, status: 'Interviewing' }]);
+  render(<App />);
+  await screen.findByLabelText('技术技能');
+  fireEvent.click(screen.getByRole('button', { name: '我的申请', exact: true }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Applications unavailable');
+  fireEvent.click(screen.getByRole('button', { name: '重新加载申请' }));
+  expect(await screen.findByText('你还没有投递岗位。')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: '刷新申请' }));
+  expect(await screen.findByText('Interviewing · 面试中')).toBeVisible();
+});
+
+it.each(['read', 'apply'])('returns to login on application %s session expiry', async (operation) => {
+  if (operation === 'read') applicationApi.list.mockRejectedValue(new ApiError('Expired', { status: 401 }));
+  else applicationApi.apply.mockRejectedValue(new ApiError('Expired', { status: 401 }));
+  render(<App />);
+  await screen.findByLabelText('技术技能');
+  fireEvent.click(screen.getByRole('button', { name: operation === 'read' ? '我的申请' : '岗位推荐', exact: true }));
+  if (operation === 'apply') fireEvent.click(await screen.findByRole('button', { name: '投递岗位', exact: true }));
+  expect(await screen.findByRole('heading', { name: '欢迎回来' })).toBeVisible();
+});
+
+it('ignores an abandoned own-list response after switching tabs', async () => {
+  let finishOld;
+  applicationApi.list.mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve; })).mockResolvedValueOnce([{ ...application, status: 'Accepted' }]);
+  render(<App />);
+  await screen.findByLabelText('技术技能');
+  fireEvent.click(screen.getByRole('button', { name: '我的申请', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: '个人资料', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: '我的申请', exact: true }));
+  await screen.findByText('Accepted · 已录用');
+  await act(async () => { finishOld([application]); });
+  expect(screen.queryByText('Pending · 待处理')).toBeNull();
 });

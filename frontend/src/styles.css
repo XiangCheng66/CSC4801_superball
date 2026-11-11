@@ -50,6 +50,14 @@ dt { color: #7b8377; flex-shrink: 0; } dd { margin: 0; overflow-wrap: anywhere; 
 .row-actions .secondary { padding: 8px 16px; }
 .employer-workspace h3 { font-size: 16px; font-weight: 650; margin: 30px 0 0; }
 .employer-workspace h3:first-of-type { margin-top: 0; }
+.applicant-panel { border-top: 1px solid #e6e8df; margin-top: 16px; padding-top: 16px; }
+.applicant-panel h4 { font-size: 13px; font-weight: 650; margin: 0 0 12px; }
+.applicant-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.applicant-list > li { border: 1px solid #e6e8df; border-radius: 8px; padding: 12px 14px; }
+.applicant-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.applicant-score { font-size: 12px; color: #3f5d46; background: #eef4df; border-radius: 20px; padding: 3px 10px; }
+.applicant-status { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.applicant-status select { width: auto; min-width: 130px; padding: 7px 10px; font-size: 13px; }
 .site-footer { min-height: 79px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #dcded2; gap: 15px; }
 .workspace-layout { display: block; padding: 40px 0; }
 .candidate-workspace { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 28px; align-items: start; }
@@ -106,4 +114,26 @@ summary { cursor: pointer; color: #36593c; font-weight: 600; padding: 7px 0; }
 .employer-dashboard > .account-card { position: sticky; top: 24px; }
 .employer-content { display: grid; gap: 28px; min-width: 0; }
 .employer-content > .auth-card { min-width: 0; }
+.application-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.application-header .secondary { padding: 8px 12px; }
+.application-status { display: inline-block; background: #edf3de; color: #365b32; padding: 6px 9px; border-radius: 6px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.application-action { margin-top: 18px; font-size: 13px; }
+.application-action .primary { width: auto; padding: 10px 18px; }
+.application-booking { margin-top: 20px; padding: 14px; background: #f5f6ef; border-radius: 8px; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.application-booking h4 { margin: 0 0 8px; }
+.application-booking p { margin: 6px 0; }
+.workspace-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 650px) { .application-card .job-heading { flex-direction: column; } }
 @media (max-width: 1000px) { .employer-dashboard { grid-template-columns: minmax(0, 1fr); } .employer-dashboard > .account-card { position: static; } }
+
+.booking-panel { grid-column: 1 / -1; min-width: 0; }
+.booking-panel .availability-header { margin-bottom: 24px; }
+.booking-create { border-bottom: 1px solid #e2e5d9; padding-bottom: 24px; margin-bottom: 24px; }
+.booking-create > .hint { margin: 12px 0; }
+.booking-list { list-style: none; padding: 0; display: grid; gap: 12px; }
+.booking-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 18px; border: 1px solid #e2e5d9; border-radius: 10px; background: #f6f7f0; font-size: 13px; overflow-wrap: anywhere; }
+.booking-list li > div { min-width: 0; }
+.booking-list button { flex-shrink: 0; }
+@media (max-width: 650px) { .booking-list li { flex-direction: column; } .workspace-tabs button { padding-inline: 4px; } }
+@media (max-width: 370px) { .workspace-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.candidate-workspace .workspace-content > .booking-panel { padding: 0; border: 0; box-shadow: none; }

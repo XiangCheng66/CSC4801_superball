@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { candidateApi } from '../../api/candidate';
+import { applicationApi } from '../../api/applications';
 import AccountHome from '../../components/AccountHome';
+import BookingPanel from '../scheduling/BookingPanel';
+import Applications, { ApplicationStatus, ApplyButton } from './Applications';
 
 function FieldError({ fields, name, id }) {
   return fields[name] ? <span className="field-error" id={id}>{[].concat(fields[name]).join(' ')}</span> : null;
@@ -104,6 +107,8 @@ function ProfileEditor({ onUserChanged, onSkillsSaved, onLoggedOut }) {
 
 function Recommendations({ revision, onLoggedOut }) {
   const [jobs, setJobs] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -111,8 +116,12 @@ function Recommendations({ revision, onLoggedOut }) {
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    candidateApi.recommendations(controller.signal)
-      .then((rows) => { if (!controller.signal.aborted) setJobs(rows); })
+    Promise.all([candidateApi.recommendations(controller.signal), applicationApi.list(controller.signal)])
+      .then(([rows, ownApplications]) => {
+        if (controller.signal.aborted) return;
+        setJobs(rows);
+        setApplications(ownApplications);
+      })
       .catch((failure) => {
         if (controller.signal.aborted) return;
         if (failure.status === 401) onLoggedOut();
@@ -122,14 +131,20 @@ function Recommendations({ revision, onLoggedOut }) {
     return () => controller.abort();
   }, [revision, attempt]);
 
+  const applicationsByJob = new Map(applications.map((row) => [row.job.id, row]));
   return <section aria-labelledby="recommendations-title">
-    <h2 id="recommendations-title">岗位推荐</h2>
+    <div className="application-header"><h2 id="recommendations-title">岗位推荐</h2><button className="secondary" disabled={loading} onClick={() => setAttempt((value) => value + 1)}>刷新岗位</button></div>
     <p className="muted">展示全部当前岗位，按你已保存的技能计算匹配分数。</p>
+    {notice && <p className="notice" role="status">{notice}</p>}
     {loading ? <p>正在加载岗位…</p> : error ? <div><p className="error" role="alert">{error}</p><button className="secondary" onClick={() => setAttempt(attempt + 1)}>重新加载岗位</button></div> : jobs.length === 0 ? <p className="empty-state">暂时没有岗位，之后再来看看。</p> : <div className="job-list">{jobs.map((job) => <article className="job-card" key={job.id}>
       <div className="job-heading"><h3>{job.title}</h3><span className="match-score" aria-label={`匹配分 ${job.match_score} 分`}>{job.match_score}% <small>匹配</small></span></div>
       <p className="job-company">{job.company}</p>
       <div className="skill-list">{job.required_skills.length ? job.required_skills.map((skill) => <span key={skill}>{skill}</span>) : <span>无技能要求</span>}</div>
       <details><summary>查看岗位描述</summary><p className="job-description">{job.description}</p></details>
+      {applicationsByJob.has(job.id) ? <p className="application-action">已投递 · <ApplicationStatus status={applicationsByJob.get(job.id).status} /></p> : <ApplyButton jobId={job.id} onLoggedOut={onLoggedOut} onApplied={(row) => setApplications((current) => [...current, row])} onConflict={() => {
+        setNotice('你已投递过该岗位。');
+        setAttempt((value) => value + 1);
+      }} />}
     </article>)}</div>}
   </section>;
 }
@@ -143,9 +158,13 @@ export default function CandidateWorkspace({ user, onUserChanged, onLoggedOut })
       <nav className="tabs workspace-tabs" aria-label="求职者功能">
         <button className={tab === 'profile' ? 'active' : ''} aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}>个人资料</button>
         <button className={tab === 'jobs' ? 'active' : ''} aria-pressed={tab === 'jobs'} onClick={() => setTab('jobs')}>岗位推荐</button>
+        <button className={tab === 'applications' ? 'active' : ''} aria-pressed={tab === 'applications'} onClick={() => setTab('applications')}>我的申请</button>
+        <button className={tab === 'bookings' ? 'active' : ''} aria-pressed={tab === 'bookings'} onClick={() => setTab('bookings')}>面试预约</button>
       </nav>
       <div hidden={tab !== 'profile'}><ProfileEditor onUserChanged={onUserChanged} onLoggedOut={onLoggedOut} onSkillsSaved={() => setRevision((value) => value + 1)} /></div>
       {tab === 'jobs' && <Recommendations revision={revision} onLoggedOut={onLoggedOut} />}
+      {tab === 'applications' && <Applications onLoggedOut={onLoggedOut} onBrowseJobs={() => setTab('jobs')} />}
+      {tab === 'bookings' && <BookingPanel role="Candidate" onLoggedOut={onLoggedOut} />}
     </section>
   </div>;
 }

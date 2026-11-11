@@ -1,6 +1,6 @@
 # 公共 API 与请求约定（A / Day 1）
 
-这是 A/B/C 共同使用的基础契约。以下认证接口已经实现；C 的雇主时段接口见 [时段契约](SCHEDULING_CONTRACT.md)。岗位 CRUD、申请和候选人预约接口由 B/C 后续补充，不将草稿路径当作已上线功能。
+这是 A/B/C 共同使用的基础契约。投递和本人申请见 [申请契约](APPLICATION_CONTRACT.md)，雇主申请人及改状态见 [申请人契约](APPLICANT_CONTRACT.md)，时段和预约见 [时段契约](SCHEDULING_CONTRACT.md) 与 [预约契约](BOOKING_CONTRACT.md)。
 
 ## 请求与响应
 
@@ -9,6 +9,7 @@
 - 成功统一为 `{ "data": ... }`。单个资源使用对象；列表在各模块规格中定义分页结构。
 - 失败统一为 `{ "error": { "code": "...", "message": "...", "fields": { ... } } }`；`fields` 仅在需要字段校验信息时出现。
 - HTTP 状态是程序判断依据；`code` 是稳定的机器标识；`message` 用于显示；不根据错误文字做分支。
+- `/api/` 响应包含 `Cache-Control: no-store`；私有数据和 CSRF 响应不应存入 HTTP 缓存。
 
 例如：
 

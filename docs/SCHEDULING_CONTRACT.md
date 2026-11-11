@@ -1,13 +1,13 @@
 # C / Day 2 — 面试时段契约
 
-已实现 FP-SCHED-1 的雇主时段管理。求职者预约接口、资格校验、双方预约详情与并发冲突处理尚未实现。共用 [API 契约](API_CONTRACT.md) 的会话、CSRF、JSON 包装和 401/403/404 规则。
+已实现 FP-SCHED-1 的雇主时段管理。C Day 3 已补充求职者预约、资格校验、双方详情与并发处理，见 [预约契约](BOOKING_CONTRACT.md)；下文描述 Day 2 时段接口。共用 [API 契约](API_CONTRACT.md) 的会话、CSRF、JSON 包装和 401/403/404 规则。
 
 ## 模型与所有权
 
 - `scheduling.InterviewSlot`：`id`、`job`、`start_at`、`end_at`、`created_at`。一个时段属于一个 Job，唯一所有者由 `job.employer` 决定，不重复保存可冲突的 employer 字段。
 - `job` 外键为 `PROTECT`，反向名 `interview_slots`。B 的岗位删除接口需捕获 `ProtectedError` 并返回 409；即使没有申请，只要有时段也不能删除该岗位。
 - 数据库 CHECK 限制 `end_at = start_at + 30 minutes`。未来时间在服务层按请求时刻校验，不能用随时间自动失效的数据库 CHECK。
-- `scheduling.Booking` 当前只提供存储与保护：`slot`、`application` 均为 OneToOne + PROTECT，及 `created_at`。一时段最多一个预约，一申请最多一个预约；预约不会随申请状态改变自动释放。
+- `scheduling.Booking` 提供存储与保护，预约写入由 Day 3 booking_services 负责：`slot`、`application` 均为 OneToOne + PROTECT，及 `created_at`。一时段最多一个预约，一申请最多一个预约；预约不会随申请状态改变自动释放。
 - 迁移 `scheduling.0001_initial` 依赖 B 的 `jobs.0001`、`applications.0001`，不改写队友的既有迁移。
 
 ## 时间与输入
@@ -51,7 +51,7 @@
 | 删除已有预约的时段 | 409 / `slot_booked`，`A booked slot cannot be deleted.` |
 | 删除已经开始或结束的时段 | 409 / `slot_started`，`A past or started slot cannot be deleted.` |
 
-删除事务锁定时段行并检查真实预约；外键 PROTECT 提供额外保护。创建事务锁定所属岗位行。**这不代表 FP-SCHED-3 的预约竞争流程已完成**；将来的预约服务也必须在事务中协调锁和唯一约束，捕获冲突，并返回课程规定的 `409` / `Slot already booked`。
+删除事务锁定时段行并检查真实预约；外键 PROTECT 提供额外保护。创建事务锁定所属岗位行。Day 3 预约服务在事务中协调锁和唯一约束，捕获冲突并返回课程规定的 `409` / `Slot already booked`，详见预约契约。
 
 ## 前端接入
 
@@ -70,4 +70,4 @@ A 的候选人端不能调用这些 Employer 专用接口。后续 C 需新增�
 
 先 `migrate`、`seed_auth_demo`，再执行 `python manage.py seed_availability_demo`。它为保留演示账号 employer1 添加一个 `[Local demo] Interview availability` 岗位及北京时间明天 09:00、09:30 的两个时段；同一天重复执行不会重复添加，不删除已有记录，不创建虚假的候选人预约。
 
-该命令仅用于本地演示，不是最终完整 seed/reset。跨天运行会补充新的未来时段并保留历史。已预约保护通过测试 fixture 中的真实 Booking 验证；普通用户当前没有创建预约的入口。
+该命令仅用于本地演示，不是最终完整 seed/reset。跨天运行会补充新的未来时段并保留历史。已预约保护通过测试 fixture 中的真实 Booking 验证；候选人可通过 Day 3 面试预约入口提交合资格预约。

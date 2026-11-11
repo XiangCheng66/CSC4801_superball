@@ -18,11 +18,12 @@ class ProfileInput(StrictSerializer):
     skills = serializers.JSONField()
 
     def validate_skills(self, value):
-        if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        if not isinstance(value, list):
             raise serializers.ValidationError("Skills must be an array of strings.")
-        if any(len(item.strip()) > 100 for item in value):
-            raise serializers.ValidationError("Each skill must have at most 100 characters.")
-        normalized = sorted(normalize_skills(value))
+        # Use the same text validation as display names and resumes, including
+        # NUL and unpaired surrogate rejection before any database write.
+        skill = StrictTextField(max_length=100, allow_blank=True)
+        normalized = sorted(normalize_skills([skill.run_validation(item) for item in value]))
         if any(len(item) > 100 for item in normalized):
             raise serializers.ValidationError("Each normalized skill must have at most 100 characters.")
         return normalized
