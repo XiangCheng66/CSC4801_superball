@@ -112,7 +112,7 @@ C 已实现雇主时段列表、未来 30 分钟创建、仅本人删除、已�
 
 CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 session 无法重用。调试外生产配置要求私有稳定 SECRET_KEY；HTTPS 环境需开启 Secure Cookie。未知错误只返回通用消息，数据库连接错误不向客户端回显。
 
-`.env`、数据库文件、便携 PostgreSQL、日志、构建产物和浏览器截图均忽略。示例环境仅含占位值；公开演示账号明确为本地用途。单元测试不调用真实外部服务，业务占位测试标记为 skipped。
+`.env`、数据库文件、便携 PostgreSQL、日志、构建产物和浏览器截图均忽略。示例环境仅含占位值，公开演示账号用于本地运行。单元测试使用隔离数据库。
 
 ## Optional AI Features and Data Flow
 
@@ -128,4 +128,4 @@ CSRF 对匿名登录/注册和登录后写操作均生效；退出后的旧 sess
 
 `.github/workflows/ci.yml` 在 push、pull_request 和手动触发时执行两个检查：Python 3.12 + PostgreSQL 17 的完整后端单元测试（同时做依赖一致性、Django 配置和迁移遗漏检查）；Node 22 的前端单元测试和生产构建。依赖从已有锁文件安装。
 
-后端 CI 只连接本次运行的 PostgreSQL service；pytest-django 创建独立 `test_superball_ci`，不连接演示库或外部服务。日志用 `-ra` 明确列出未实现业务的 skip；CI 通过不是全部课程需求完成。每次推送的实际结果见 [GitHub Actions](https://github.com/XiangCheng66/CSC4801_superball/actions)，不能将本地命令验证等同于远程 CI 通过。
+后端 CI 连接本次运行的 PostgreSQL service，pytest-django 创建独立 `test_superball_ci` 并执行两项并发预约测试。每次推送的结果见 [GitHub Actions](https://github.com/XiangCheng66/CSC4801_superball/actions)。

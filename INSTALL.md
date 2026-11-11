@@ -176,7 +176,7 @@ npm run build
 - 临时 PostgreSQL 17 service，使用公开的 CI-only 凭证；测试库为独立 `test_superball_ci`，不使用本地 `.env` 或演示数据。
 - Node 22，`npm ci`、`npm test`、`npm run build`。
 
-工作流配置不要求 GitHub Secrets。业务未实现的 skip 在日志中保留明确原因，不作为需求通过证据。推送后在 [GitHub Actions](https://github.com/XiangCheng66/CSC4801_superball/actions) 检查对应 commit 的真实运行结果。后端测试库隔离与服务容器配置分别参考 [Django 测试文档](https://docs.djangoproject.com/en/5.2/topics/testing/overview/) 和 [GitHub PostgreSQL service 文档](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers)。
+推送后可在 [GitHub Actions](https://github.com/XiangCheng66/CSC4801_superball/actions) 查到该提交的 PostgreSQL 测试、前端测试和生产构建结果。
 
 ## Optional Browser Smoke Test
 
@@ -187,7 +187,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-浏览器测试覆盖发布岗位、推荐、投递、时段删除保护、并行重复投递、直接越权、同浏览器换账号后的简历隔离及手机布局；使用 e2e_ 演示账号，不调用外部服务。
+浏览器测试覆盖发布岗位和时段、推荐与投递、雇主管理申请人、预约竞争、双方查看及状态改变后的预约保留。同时检查时段删除保护、越权、换账号后的简历隔离及手机布局。请在独立演示库中运行，重复运行前可用 `seed_demo` 恢复初始状态。
 
 已有 Edge 的 Windows 可不下载 Chromium：
 

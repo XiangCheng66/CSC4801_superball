@@ -30,18 +30,18 @@ A 已由 XiangCheng66 认领；C 职责已认领，成员姓名对应与 B 的�
 | 部分 | 开发基线 | 职责 |
 |---|---|---|
 | 前端 | React（已确定） | 页面、表单、交互与 API 调用 |
-| 后端 | Python + Django 5.2 + Django REST Framework | 认证、资料/推荐、投递/本人申请、公司/岗位、雇主时段 API；雇主申请人和候选人预约接口待补 |
-| 数据库 | PostgreSQL 17 | 账号、资料、公司、岗位、技能、申请、时段及最小 Booking 存储；完整预约服务待补 |
+| 后端 | Python + Django 5.2 + Django REST Framework | 认证、资料、推荐、投递、公司、岗位、申请人、时段与预约 API |
+| 数据库 | PostgreSQL 17 | 存储账号、资料、岗位、申请和预约，并用唯一约束防止重复投递与预约 |
 | 验证 | pytest + pytest-django；Vitest；可选 Playwright | 默认隔离内存测试库，也支持独立 PostgreSQL 测试库 |
-| 交付 | 多阶段 Dockerfile + Compose | 已验证本地干净镜像构建、Python 服务与 PostgreSQL，见 A Day 2 交接 |
+| 交付 | 多阶段 Dockerfile + Compose | 从干净源码构建并运行前端、后端和 PostgreSQL，见 [安装指南](INSTALL.md) |
 
 React 调用 Python API；后端校验角色、所有权和业务规则后访问数据库，并返回 JSON。匹配分数和预约资格由后端统一计算和校验。
 
 参考：[Django](https://www.djangoproject.com/start/)、[Django REST Framework](https://www.django-rest-framework.org/)、[PostgreSQL 数据约束](https://www.postgresql.org/docs/current/ddl-constraints.html)。Python 版本锁在 `requirements.lock`，前端版本锁在 `frontend/package-lock.json`。
 
-### 规划目录
+### 项目目录
 
-下列目录包含已实现模块与后续目标；accounts/common/config/candidates/employers/jobs/applications/matching/scheduling 已建立，前端已有求职者与雇主工作台、投递和本人申请；雇主申请人管理与候选人预约创建仍待实现。
+前端按账号、求职者、雇主和面试流程组织，后端按业务模块提供 API。
 
 ```text
 CSC4801_superball/
@@ -60,7 +60,7 @@ CSC4801_superball/
 │   ├── candidates/             # A：模型、权限 API、推荐和演示 seed
 │   ├── employers/              # B：已建立公司资料模型
 │   ├── jobs/                   # B
-│   ├── applications/           # B 的模型 + A Day 3 共享投递服务/本人查询
+│   ├── applications/           # 投递、本人查询、雇主申请人列表及状态更新
 │   ├── matching/               # C：已建立共享评分与排序服务
 │   └── scheduling/             # C
 ├── tests/unit/
@@ -104,17 +104,15 @@ CSC4801_superball/
 3. 唯一约束：账号标识、`Application(candidate_id, job_id)`、`Booking.slot_id`、`Booking.application_id`。
 4. API 请求字段、响应字段、错误码及公共服务函数。数据库模型和迁移变更提前通知队友。
 
-认证、求职者资料/简历及推荐接口已实现，详见 SPEC 与公共/求职者契约；以下范围同时包含已实现的 A 接口和 B/C 的后续接口草稿：
+接口字段、权限与响应见 [公共 API 契约](docs/API_CONTRACT.md)。
 
-| 负责人 | API 范围草稿 |
+| 负责人 | API 范围 |
 |---|---|
 | A | `/api/auth/`、`/api/candidate/profile/`、`/api/candidate/resume/`、`/api/candidate/recommendations/`；Day 3 接入 `/api/applications/` 投递与本人查询 |
 | B | `/api/employer/`、`/api/employer/jobs/`、`/api/employer/applications/`（本人岗位的申请人和状态） |
-| C | `/api/slots/`、`/api/bookings/`，以及后端共享匹配函数 |
+| C | `/api/slots/`、`/api/booking-applications/`、`/api/bookings/`，以及后端共享匹配函数 |
 
-共享服务：已实现 `calculate_match_score(candidate_skills, required_skills)`、`apply_to_job(candidate, job_id)`；后续由 B/C 提供 `update_application_status(employer, application_id, status)`、`book_interview(candidate, application_id, slot_id)`。A Day 3 补齐尚未落地的公共投递边界，不在前后端各写一套校验。
-
-匹配函数和 `rank_jobs/rank_applicants` 已实现，具体输入输出见 [共享匹配契约](docs/MATCHING_CONTRACT.md)。其余服务仍待对应模块实现；不得在前端或另一个后端模块复制评分公式。
+投递使用 `apply_to_job`，雇主通过申请状态接口更新本人岗位下的申请，预约使用 `create_booking` 在数据库事务中检查资格并保存。两个角色使用同一套评分函数及 `rank_jobs`、`rank_applicants` 排序。接口说明见 [共享匹配契约](docs/MATCHING_CONTRACT.md)。
 
 ### 必须保持的业务规则
 
@@ -144,7 +142,7 @@ CSC4801_superball/
 | 第 4～5 天 | 投递入口、我的申请 | 防重复投递、申请人查询、状态修改 | 预约资格、事务及冲突处理 | 完整走通投递、进入面试、预约 |
 | 第 6～7 天 | 求职者权限和安装流程 | 雇主权限和演示数据 | 预约冲突与集成修复 | Docker 环境中运行主流程并执行真实单元测试 |
 
-第一轮业务演示：**雇主发布一条岗位 → 求职者登录 → 看到该岗位及正确匹配分数。** 后续再接入申请和预约。必需功能、测试和 Docker 稳定后再完善视觉效果及可选 AI 功能。
+完整业务演示从发布岗位和时段开始。求职者查看匹配结果并投递，雇主将申请设为 `Interviewing`，求职者预约后双方都能查看面试时间。
 
 ### Git 协作与完成标准
 
@@ -175,7 +173,7 @@ docker compose up -d --no-build --wait --wait-timeout 120
 docker compose exec -T app python manage.py seed_demo
 ```
 
-访问 `http://127.0.0.1:8000`。本机开发按 INSTALL.md 建立 PostgreSQL、运行迁移和统一 seed_demo，分别启动 Python 后端（8000）与 React 前端（5173）。求职者可切换个人资料、可投递的推荐和我的申请；雇主在同一工作台使用账号操作、公司/岗位管理和面试时段管理。
+访问 `http://127.0.0.1:8000`。本机开发按 INSTALL.md 建立 PostgreSQL、运行迁移和演示 seed，分别启动 Python 后端（8000）与 React 前端（5173）。求职者工作台包含个人资料、岗位推荐、我的申请和面试预约。雇主工作台包含公司、岗位、申请人、面试时段和预约记录。
 
 ## Demo Accounts
 
@@ -214,7 +212,7 @@ python -m pytest tests/unit -v
 
 | Requirement ID | 负责人 / 行为 | 实现文件或位置（规划） | Unit test(s) / verification evidence（待完成） |
 |---|---|---|---|
-| FP-ARCH-1 | 全员：账号、资料/推荐、投递/本人申请、公司/岗位、雇主时段已完成 | `frontend/`、`backend/`、`Dockerfile`、`compose.yaml` | 当前构建、数据库与浏览器记录见 A Day 3 交接；另有三分支主流程浏览器回归 |
+| FP-ARCH-1 | 全员：认证、投递、申请人管理与预约贯通 | `frontend/`、`backend/`、`Dockerfile`、`compose.yaml` | `frontend/e2e/hiring-flow.spec.js` 覆盖完整招聘流程 |
 | FP-AUTH-1 | A：已实现注册、登录、退出、唯一标识 | `backend/accounts/models.py`、`serializers.py`、`views.py` | `tests/unit/test_auth.py::test_fp_auth_1_registration_and_session_lifecycle`；`test_fp_auth_1_invalid_registration`；`test_duplicate_account_is_rejected_case_insensitively`（同文件） |
 | FP-AUTH-2 | A：已实现密码哈希、公开字段白名单 | `backend/accounts/models.py`、`serializers.py` | `tests/unit/test_auth.py::test_fp_auth_2_salted_hash_and_password_verification` |
 | FP-AUTH-3 | A：角色/所有权由服务端校验，换账号清除旧工作台 | `backend/common/authentication.py`、`permissions.py`、`frontend/src/App.jsx` | `tests/unit/test_auth.py::test_fp_auth_3_authorization_and_missing_object`；`test_role_permissions_are_enforced_by_server`；`frontend/src/App.test.jsx` 的换账号与迟到响应回归 |
@@ -237,17 +235,17 @@ python -m pytest tests/unit -v
 | FP-DOC-1 | A 牵头：干净 checkout、健康等待、迁移、seed、隔离测试 | `INSTALL.md`、`Dockerfile`、`compose.yaml` | [A 收尾交接](docs/A_FINAL_HANDOFF.md)；`test_auth.py::test_optional_startup_seed_keeps_existing_demo_account_credentials` |
 | FP-DOC-2 | B 牵头：完整 README 与映射 | `README.md` | 逐项核对概览、架构、账号、测试、文档和全部需求映射 |
 | FP-DOC-3 | B：一条命令重置并灌入完整演示数据 | `backend/common/management/commands/seed_demo.py` | `tests/unit/test_seed_demo.py::test_seed_demo_builds_the_documented_dataset`；`test_seed_demo_reproduces_all_four_match_examples`；`test_seed_demo_supplies_two_interviewing_candidates_for_one_slot`；`test_seed_demo_creates_future_thirty_minute_slots_in_beijing_time`；`test_seed_demo_is_repeatable_and_resets_business_rows`（同文件） |
-| FP-TEST-1 | 账号、资料/推荐、投递/本人申请、公司/岗位与雇主时段已有真实测试 | `tests/unit/`、前端测试、CI | 完整测试包含三人 Day 2 与 A Day 3；新增防重/越权/已有预约读取及并行 HTTP 浏览器回归。SQLite 仅跳过两项 PostgreSQL 并发测试 |
+| FP-TEST-1 | 账号、求职者、雇主与预约流程均有具名测试 | `tests/unit/`、前端测试、CI | PostgreSQL 执行完整套件，包括两个并发预约用例。SQLite 跳过这两个用例 |
 | FP-SUB-1 | 全员：确切 main commit 与完整 Docker 环境 | Git、`Dockerfile`、`INSTALL.md` | 在提交 commit 验证构建、依赖启动、迁移、seed、测试与 UI |
 
 ## Document Index
 
 | 文档 | 用途 | 当前状态 |
 |---|---|---|
-| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | A/B/C Day 2 + A Day 3 |
+| [README.md](README.md) | 项目概览、分工、启动计划与需求映射 | A/B/C Day 3 整合 |
 | [SPEC.md](SPEC.md) | 架构、模型、权限、API、匹配、预约事务与安全设计 | 认证、求职者资料/推荐、雇主模型与 CI 已记录 |
 | [INSTALL.md](INSTALL.md) | 精确安装、启动、迁移、seed、测试和 Docker 指令 | 已提供基础运行方式 |
-| [Day 2 集成记录](docs/DAY2_INTEGRATION.md) | 三分支来源、集成调整和验证 | 当前集成状态 |
+| [Day 2 集成记录](docs/DAY2_INTEGRATION.md) | 三分支来源、集成调整和验证 | 历史验收 |
 | [B 第二天交接](docs/B_DAY2_HANDOFF.md) / [C 第二天交接](docs/C_DAY2_HANDOFF.md) | 各分支独立交付与历史证据 | 已保留 |
 | [时段契约](docs/SCHEDULING_CONTRACT.md) | UTC/北京时间、所有权和预约保护 | 已实现雇主管理 |
 | [公共 API 契约](docs/API_CONTRACT.md) | 会话、CSRF、JSON、错误码和模块接入示例 | 已落地 |

@@ -43,7 +43,7 @@
 
 同一岗位上的创建在 PostgreSQL 下由行锁串行化；唯一约束防止不配合加锁的其他写入产生第二条申请。申请的 Job 外键 PROTECT 保留 B 的删除保护：产生申请后删除岗位返回 409，数据不变。SQLite 仍依靠数据库唯一约束，生产/演示使用 PostgreSQL。
 
-B 后续实现申请人查询和状态变更时复用 Application，不新增另一套投递逻辑；本次不实现 FP-EMP-3。C 后续提供预约接口后，已关联预约会自动进入本响应；本次不实现 FP-SCHED-2/3。
+雇主申请人查询与状态变更复用 Application 模型。预约成功后，本人申请响应从同一个 Booking 记录读取预约信息。字段与权限见 [申请人契约](APPLICANT_CONTRACT.md) 和 [预约契约](BOOKING_CONTRACT.md)。
 
 ## 页面与验证
 
