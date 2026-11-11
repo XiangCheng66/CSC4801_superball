@@ -17,11 +17,11 @@ Candidate books a slot → both parties can view the booking
 
 ## Team Members
 
-- JeRant
-- Isochiot
-- XiangCheng66 (A: project/authentication foundations and candidate module)
+- **XiangCheng66 (A)**: Project/authentication foundations and the candidate module; registration/login, profiles, private resumes, job recommendations and own applications, plus Docker and the installation guide.
+- **Isochiot (B)**: Employer and recruiting modules; company profiles, job management, application creation and duplicate prevention, applicant queries and status management, plus unified demo data and README coordination.
+- **JeRant (C)**: Matching and interview booking modules; shared scoring/ranking, interview slots, booking eligibility, transactions and concurrency conflicts, plus CI and architecture/transaction documentation.
 
-A is assigned to XiangCheng66. Role C has been claimed; the team still needs to document the member-to-role mapping for B and C.
+Throughout this README, A, B and C refer to XiangCheng66, Isochiot and JeRant respectively. Each member owns the frontend, backend, tests and documentation for their modules and participates in cross-review and integration acceptance.
 
 ## Architecture Summary
 
