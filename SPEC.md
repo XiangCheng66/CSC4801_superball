@@ -82,6 +82,8 @@
 
 React 使用文本插值，不使用 dangerouslySetInnerHTML。Candidate 工作台保留账号操作，提供资料/私有简历、可投递的推荐与“我的申请”；本人申请展示全部状态和已有预约（北京时间），支持失败重试、手动刷新、空态和会话失效。投递按钮阻止重复事件，409 后重新查询实际状态，写操作不自动重试。EmployerDashboard 统一显示账号、B 的公司/岗位和 C 的 AvailabilityPanel；成功修改岗位后通过 revision 自动刷新时段选择项。隔离雇主岗位 CSS，避免覆盖求职者列表。手机布局有浏览器检查。
 
+界面为中文/英文双语：页头右上角的切换按钮在两种语言间切换，选择保存在 `localStorage` 的 `superball.lang`，默认中文，刷新后保持。词典在 `frontend/src/i18n/messages.js`，`useI18n()` 提供 `t()` 与状态标签；无 Provider 时回退到中文，便于组件独立测试。**不翻译**的内容包括产品名 Superball、角色值 Candidate/Employer、申请状态值（Pending/Interviewing/Rejected/Accepted）、岗位标题、公司名、技能与人名——这些是数据或契约值。网络层兜底错误（如服务不可达）仍由 `api/client.js` 以中文抛出。
+
 ## Candidate Applications
 
 字段、错误和共享边界见 [APPLICATION_CONTRACT.md](docs/APPLICATION_CONTRACT.md)。`applications.services.apply_to_job` 是唯一投递写入服务，验证 Candidate，在事务内锁定岗位、检查已有申请并使用模型 Pending 默认值创建；已有唯一约束负责最终防重。捕获完整回滚后的 IntegrityError，仅在确有重复记录时映射 409；其他故障继续抛出。资料、私有简历无需随申请提交，也不复制到申请。

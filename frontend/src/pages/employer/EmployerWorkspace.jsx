@@ -1,15 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { employerApi } from '../../api/employer';
+import { useI18n } from '../../i18n/LanguageProvider';
 import { formatTime } from '../scheduling/time';
 
 const EMPTY_JOB = { title: '', description: '', skills: '' };
 const STATUSES = ['Pending', 'Interviewing', 'Rejected', 'Accepted'];
-const STATUS_LABELS = {
-  Pending: '待处理',
-  Interviewing: '面试中',
-  Rejected: '已拒绝',
-  Accepted: '已录用',
-};
 
 export function splitSkills(value) {
   return value
@@ -20,6 +15,7 @@ export function splitSkills(value) {
 }
 
 export default function EmployerWorkspace({ user, onLoggedOut, embedded = false, onJobsChanged }) {
+  const { t, language, statusName } = useI18n();
   const [attempt, setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -36,6 +32,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
   const [applicantsBusy, setApplicantsBusy] = useState(false);
   const [applicantsResult, setApplicantsResult] = useState({});
   const requestedJob = useRef(null);
+  const listSeparator = language === 'zh' ? '、' : ', ';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,7 +67,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
       return;
     }
     if (failure.status === 409) {
-      setResult({ error: '该岗位仍有申请或面试时段，无法删除。' });
+      setResult({ error: t('employer.deleteBlocked') });
       return;
     }
     setResult({ error: failure.message });
@@ -87,7 +84,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
         description: company.description,
       });
       setCompany({ company_name: saved.company_name, description: saved.description });
-      setCompanyResult({ notice: '公司资料已保存。' });
+      setCompanyResult({ notice: t('employer.companySaved') });
     } catch (failure) {
       handleFailure(failure, setCompanyResult);
     } finally {
@@ -108,7 +105,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
       });
       setJobs((current) => [...current, created]);
       setDraft(EMPTY_JOB);
-      setJobResult({ notice: `已发布「${created.title}」。` });
+      setJobResult({ notice: t('employer.published', { title: created.title }) });
       onJobsChanged?.();
     } catch (failure) {
       handleFailure(failure, setJobResult);
@@ -130,7 +127,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
       });
       setJobs((current) => current.map((job) => (job.id === updated.id ? updated : job)));
       setEditing(null);
-      setJobResult({ notice: `已更新「${updated.title}」。` });
+      setJobResult({ notice: t('employer.updated', { title: updated.title }) });
       onJobsChanged?.();
     } catch (failure) {
       handleFailure(failure, setJobResult);
@@ -152,7 +149,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
         setApplicantsJob(null);
         setApplicants([]);
       }
-      setJobResult({ notice: `已删除「${job.title}」。` });
+      setJobResult({ notice: t('employer.deleted', { title: job.title }) });
       onJobsChanged?.();
     } catch (failure) {
       handleFailure(failure, setJobResult);
@@ -194,7 +191,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
     try {
       const updated = await employerApi.updateApplicationStatus(row.id, status);
       setApplicants((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-      setApplicantsResult({ notice: `已将「${row.display_name}」设为${STATUS_LABELS[status]}。` });
+      setApplicantsResult({ notice: t('employer.statusChanged', { name: row.display_name, status: statusName(status) }) });
     } catch (failure) {
       if (failure.status === 401) onLoggedOut();
       else setApplicantsResult({ error: failure.message });
@@ -206,7 +203,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
   if (loading) {
     return (
       <section className="auth-card">
-        <p role="status">正在加载雇主工作区…</p>
+        <p role="status">{t('employer.loadingWorkspace')}</p>
       </section>
     );
   }
@@ -214,23 +211,23 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
   if (loadError) {
     return (
       <section className="auth-card">
-        <h2>工作区加载失败</h2>
+        <h2>{t('employer.workspaceFailed')}</h2>
         <p className="error" role="alert">{loadError}</p>
-        <button className="primary" onClick={() => setAttempt(attempt + 1)}>重试</button>
+        <button className="primary" onClick={() => setAttempt(attempt + 1)}>{t('app.retry')}</button>
       </section>
     );
   }
 
   return (
     <section className="auth-card employer-workspace" aria-labelledby="employer-title">
-      {!embedded && <span className="role-badge">雇主 · {user.role}</span>}
-      <h2 id="employer-title">{embedded ? '公司与岗位' : `你好，${user.display_name || user.username}`}</h2>
-      <p className="muted">招聘工作台：维护公司资料与岗位，求职者会看到它们。</p>
+      {!embedded && <span className="role-badge">{language === 'zh' ? `${t('employer.roleBadge')} · ${user.role}` : user.role}</span>}
+      <h2 id="employer-title">{embedded ? t('employer.panelTitle') : t('employer.greeting', { name: user.display_name || user.username })}</h2>
+      <p className="muted">{t('employer.subtitle')}</p>
 
       <form onSubmit={saveCompany} aria-labelledby="company-heading">
-        <h3 id="company-heading">公司资料</h3>
+        <h3 id="company-heading">{t('employer.companySection')}</h3>
         <label>
-          公司名称
+          {t('employer.companyName')}
           <input
             value={company.company_name}
             maxLength={200}
@@ -239,7 +236,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
           />
         </label>
         <label>
-          公司简介
+          {t('employer.companyDescription')}
           <textarea
             value={company.description}
             rows={3}
@@ -250,14 +247,14 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
         {companyResult.notice && <p className="notice" role="status">{companyResult.notice}</p>}
         {companyResult.error && <p className="error" role="alert">{companyResult.error}</p>}
         <div className="actions">
-          <button className="primary" type="submit" disabled={companyBusy}>保存公司资料</button>
+          <button className="primary" type="submit" disabled={companyBusy}>{t('employer.saveCompany')}</button>
         </div>
       </form>
 
       <form onSubmit={createJob} aria-labelledby="new-job-heading">
-        <h3 id="new-job-heading">发布新岗位</h3>
+        <h3 id="new-job-heading">{t('employer.newJobSection')}</h3>
         <label>
-          岗位标题
+          {t('employer.jobTitle')}
           <input
             value={draft.title}
             maxLength={200}
@@ -266,7 +263,7 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
           />
         </label>
         <label>
-          岗位描述
+          {t('employer.jobDescription')}
           <textarea
             value={draft.description}
             rows={3}
@@ -275,23 +272,23 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
           />
         </label>
         <label>
-          技能要求（逗号分隔，可留空）
+          {t('employer.jobSkills')}
           <input
             value={draft.skills}
             onChange={(event) => setDraft({ ...draft, skills: event.target.value })}
           />
         </label>
         <div className="actions">
-          <button className="primary" type="submit" disabled={jobBusy}>发布岗位</button>
+          <button className="primary" type="submit" disabled={jobBusy}>{t('employer.publishJob')}</button>
         </div>
       </form>
 
       {jobResult.notice && <p className="notice" role="status">{jobResult.notice}</p>}
       {jobResult.error && <p className="error" role="alert">{jobResult.error}</p>}
 
-      <h3>我的岗位（{jobs.length}）</h3>
+      <h3>{t('employer.myJobs', { count: jobs.length })}</h3>
       {jobs.length === 0 ? (
-        <p className="hint">还没有岗位。发布第一条后，求职者就能看到并按技能匹配。</p>
+        <p className="hint">{t('employer.noJobsHint')}</p>
       ) : (
         <ul className="job-list">
           {jobs.map((job) => (
@@ -299,27 +296,27 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
               {editing?.id === job.id ? (
                 <form onSubmit={saveJob}>
                   <input
-                    aria-label="编辑岗位标题"
+                    aria-label={t('employer.editTitle')}
                     value={editing.title}
                     maxLength={200}
                     required
                     onChange={(event) => setEditing({ ...editing, title: event.target.value })}
                   />
                   <textarea
-                    aria-label="编辑岗位描述"
+                    aria-label={t('employer.editDescription')}
                     value={editing.description}
                     rows={3}
                     required
                     onChange={(event) => setEditing({ ...editing, description: event.target.value })}
                   />
                   <input
-                    aria-label="编辑技能要求"
+                    aria-label={t('employer.editSkills')}
                     value={editing.skills}
                     onChange={(event) => setEditing({ ...editing, skills: event.target.value })}
                   />
                   <div className="actions">
-                    <button className="primary" type="submit" disabled={jobBusy}>保存</button>
-                    <button className="text-button" type="button" onClick={() => setEditing(null)}>取消</button>
+                    <button className="primary" type="submit" disabled={jobBusy}>{t('employer.save')}</button>
+                    <button className="text-button" type="button" onClick={() => setEditing(null)}>{t('employer.cancel')}</button>
                   </div>
                 </form>
               ) : (
@@ -327,58 +324,62 @@ export default function EmployerWorkspace({ user, onLoggedOut, embedded = false,
                   <strong>{job.title}</strong>
                   <p className="muted">{job.description}</p>
                   <p className="hint">
-                    {job.required_skills.length ? `技能：${job.required_skills.join('、')}` : '无技能要求（匹配分 100）'}
+                    {job.required_skills.length
+                      ? t('employer.skillsPrefix', { skills: job.required_skills.join(listSeparator) })
+                      : t('employer.noSkillsHint')}
                   </p>
                   <div className="row-actions">
                     <button className="secondary" type="button" onClick={() => toggleApplicants(job)}>
-                      {applicantsJob === job.id ? '收起申请人' : '申请人'}
+                      {applicantsJob === job.id ? t('employer.hideApplicants') : t('employer.showApplicants')}
                     </button>
                     <button
                       className="secondary"
                       type="button"
                       onClick={() => setEditing({ ...job, skills: job.required_skills.join(', ') })}
                     >
-                      编辑
+                      {t('employer.edit')}
                     </button>
                     <button className="text-button" type="button" disabled={jobBusy} onClick={() => removeJob(job)}>
-                      删除
+                      {t('employer.delete')}
                     </button>
                   </div>
                   {applicantsJob === job.id && (
                     <div className="applicant-panel">
-                      <h4>申请人（{applicants.length}）</h4>
-                      {applicantsBusy && <p className="hint" role="status">正在处理…</p>}
+                      <h4>{t('employer.applicantsTitle', { count: applicants.length })}</h4>
+                      {applicantsBusy && <p className="hint" role="status">{t('employer.processing')}</p>}
                       {applicantsResult.notice && <p className="notice" role="status">{applicantsResult.notice}</p>}
                       {applicantsResult.error && <p className="error" role="alert">{applicantsResult.error}</p>}
                       {!applicantsBusy && applicants.length === 0 && (
-                        <p className="hint">还没有人投递这个岗位。</p>
+                        <p className="hint">{t('employer.noApplicants')}</p>
                       )}
                       {applicants.length > 0 && (
-                        <ul className="applicant-list" aria-label={`${job.title} 的申请人`}>
+                        <ul className="applicant-list" aria-label={t('employer.applicantListLabel', { job: job.title })}>
                           {applicants.map((row) => (
                             <li key={row.id}>
                               <div className="applicant-line">
                                 <strong>{row.display_name}</strong>
-                                <span className="applicant-score">匹配分 {row.match_score}</span>
+                                <span className="applicant-score">{t('employer.applicantScore', { score: row.match_score })}</span>
                               </div>
                               <p className="hint">
-                                {row.skills.length ? `技能：${row.skills.join('、')}` : '未填写技能'}
+                                {row.skills.length
+                                  ? t('employer.applicantSkills', { skills: row.skills.join(listSeparator) })
+                                  : t('employer.applicantNoSkills')}
                               </p>
                               <p className="hint">
                                 {row.booking
-                                  ? `面试：${formatTime(row.booking.start_at)}（北京时间）`
-                                  : '尚未预约面试'}
+                                  ? t('employer.interviewAt', { time: formatTime(row.booking.start_at) })
+                                  : t('employer.noInterview')}
                               </p>
                               <div className="applicant-status">
-                                <span className="hint">申请状态</span>
+                                <span className="hint">{t('employer.applicationStatus')}</span>
                                 <select
-                                  aria-label={`${row.display_name} 的申请状态`}
+                                  aria-label={t('employer.statusLabel', { name: row.display_name })}
                                   value={row.status}
                                   disabled={applicantsBusy}
                                   onChange={(event) => changeStatus(row, event.target.value)}
                                 >
                                   {STATUSES.map((status) => (
-                                    <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+                                    <option key={status} value={status}>{statusName(status)}</option>
                                   ))}
                                 </select>
                               </div>
