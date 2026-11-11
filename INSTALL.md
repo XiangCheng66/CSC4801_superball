@@ -1,15 +1,17 @@
-# Installation Guide
+# 安装指南
+
+**中文** | [English](INSTALL.en.md)
 
 当前可运行账号、资料/私有简历/岗位推荐、投递与本人申请、公司/岗位管理与雇主面试时段。雇主申请人/状态和候选人预约创建已接通；统一 seed_demo 已提供完整业务重置和演示数据。
 
-## Prerequisites and Versions
+## 前置条件与版本
 
 - 本机开发：Python 3.11 或 3.12、Node.js 22（至少 22.12，低于 23）、npm 10/11、PostgreSQL 17。
 - 容器运行：Docker Engine/Desktop 和支持 `docker compose up --wait` 的 Compose。镜像为 `node:22-bookworm-slim`、`python:3.12-slim-bookworm`、`postgres:17-bookworm`，均在 Dockerfile/compose.yaml 显式声明。只使用容器时无需在宿主机安装 Node、Python 或 PostgreSQL。
 - Python 完整版本锁在 `requirements.lock`，直接依赖范围在 `requirements.in`；React/构建/测试依赖锁在 `frontend/package-lock.json`。
 - 核心功能、单元测试和浏览器测试均不使用第三方模型或付费 API。
 
-## Environment Variables
+## 环境变量
 
 在仓库根目录复制配置（Windows PowerShell）：
 
@@ -34,7 +36,7 @@ macOS/Linux 使用 `test -f .env || cp .env.example .env`。用随机值替换 `
 | `SEED_AUTH_DEMO` | 默认 `0`；本地设 `1` 时，启动只补齐缺失的四个演示账号，保留已有账号与密码 |
 | `TEST_DATABASE_ENGINE` | 默认独立 SQLite 内存测试库；`postgresql` 时使用独立 `test_<POSTGRES_DB>` 库 |
 
-## Docker Build and Startup
+## Docker 构建与启动
 
 从目标提交的干净 checkout 开始，在根目录准备好 `.env` 后执行：
 
@@ -67,7 +69,7 @@ docker compose down
 
 构建和容器验收见 [A 收尾交接](docs/A_FINAL_HANDOFF.md)。上述测试把缓存放到 /tmp，以适配镜像中非 root 的 student 用户。PostgreSQL 测试库只用于测试，单元测试无需 seed。
 
-## Local Development
+## 本机开发
 
 ### 1. 数据库
 
@@ -116,7 +118,7 @@ PowerShell 执行策略阻止 npm.ps1 时使用 `npm.cmd`。打开 **http://127.
 
 后端端口变化时，在启动 Vite 前设置 `API_PROXY_TARGET`。前端端口变化还需同步 `DJANGO_CSRF_TRUSTED_ORIGINS` 并重启后端。生产构建命令为 `npm run build`，输出 `frontend/dist`；Dockerfile 将它复制到 `/app/frontend_dist`。
 
-## Demo Accounts and Seed
+## 演示账号与数据初始化
 
 以下密码均为公开的 **local/demo** 凭证：
 
@@ -135,7 +137,7 @@ candidate1/2/3 的技能分别为 Python+SQL、Python、Rust，对 `[DEMO-A2] Ba
 
 `seed_auth_demo`、`seed_candidate_demo`、`seed_availability_demo` 保留为增量命令；日常开发和浏览器测试统一使用 `seed_demo`。
 
-## Running Unit Tests
+## 运行单元测试
 
 后端（根目录；不需要运行开发服务器）：
 
@@ -168,7 +170,7 @@ npm run build
 
 资料/推荐、投递与本人申请、公司/岗位和时段管理均有真实用例；SQLite 仅跳过两项 PostgreSQL 行锁并发测试，PostgreSQL 跑完整套件。
 
-## Continuous Integration
+## 持续集成
 
 `.github/workflows/ci.yml` 在 push、PR 和手动触发时运行：
 
@@ -178,7 +180,7 @@ npm run build
 
 推送后可在 [GitHub Actions](https://github.com/XiangCheng66/CSC4801_superball/actions) 查到该提交的 PostgreSQL 测试、前端测试和生产构建结果。
 
-## Optional Browser Smoke Test
+## 可选浏览器冒烟测试
 
 先 `migrate`，再执行 `python manage.py seed_demo`（一条命令重置并灌入全部演示数据）；完整浏览器测试依赖这套数据。启动服务后在 frontend 执行：
 
@@ -206,7 +208,7 @@ candidate1/2/3 可查看统一 seed 的四种申请状态。已有 Booking 时�
 
 单独验证：`python -m pytest tests/unit/test_applications.py tests/unit/test_workflows.py -q -ra`。完整测试命令保持不变。
 
-## Troubleshooting
+## 故障排查
 
 - 数据库连接失败：确认 PostgreSQL 正在运行，`.env` 的主机、端口和密码与数据库一致；本机默认和 Compose 容器内端口配置不同。
 - 关系/表不存在：先执行 `manage.py migrate --noinput`；不要提交自己的数据库文件或修改已共享的初始迁移。

@@ -33,7 +33,7 @@ A is assigned to XiangCheng66. Role C has been claimed; the team still needs to 
 | Backend | Python + Django 5.2 + Django REST Framework | Authentication, profiles, recommendations, applications, companies, jobs, applicants, slots and bookings |
 | Database | PostgreSQL 17 | Persistent data and unique constraints preventing duplicate applications and bookings |
 | Verification | pytest + pytest-django; Vitest; optional Playwright | Isolated in-memory test database by default; dedicated PostgreSQL test database also supported |
-| Delivery | Multi-stage Dockerfile + Compose | Build frontend/backend from a clean checkout and run with PostgreSQL; see [installation guide](INSTALL.md) |
+| Delivery | Multi-stage Dockerfile + Compose | Build frontend/backend from a clean checkout and run with PostgreSQL; see [installation guide](INSTALL.en.md) |
 
 React calls the Python API. The backend checks roles, ownership and business rules before accessing the database and returning JSON. Scores and booking eligibility are calculated and validated centrally on the backend.
 
@@ -161,7 +161,7 @@ git clone https://github.com/XiangCheng66/CSC4801_superball.git
 cd CSC4801_superball
 ```
 
-See [INSTALL.md](INSTALL.md) for complete instructions. For local Docker:
+See [INSTALL.md](INSTALL.en.md) for complete instructions. For local Docker:
 
 ```bash
 cp .env.example .env
@@ -245,7 +245,7 @@ Supporting documents linked below retain their existing language; this change pr
 |---|---|---|
 | [Chinese README](README.md) / [English README](README.en.md) | Overview, responsibilities, startup plan and requirement mapping | A/B/C Day 3 integration |
 | [SPEC.md](SPEC.md) | Architecture, models, permissions, APIs, matching, booking transactions and security | Authentication, candidate profile/recommendations, employer model and CI documented |
-| [INSTALL.md](INSTALL.md) | Exact installation, startup, migrations, seed, tests and Docker instructions | Basic workflows provided |
+| [INSTALL.md](INSTALL.en.md) | Exact installation, startup, migrations, seed, tests and Docker instructions | Basic workflows provided |
 | [Day 2 integration](docs/DAY2_INTEGRATION.md) | Three branch sources, integration changes and verification | Historical acceptance |
 | [B Day 2](docs/B_DAY2_HANDOFF.md) / [C Day 2](docs/C_DAY2_HANDOFF.md) | Independent deliveries and historical evidence | Retained |
 | [Scheduling contract](docs/SCHEDULING_CONTRACT.md) | UTC/Beijing time, ownership and booking protection | Employer management implemented |
