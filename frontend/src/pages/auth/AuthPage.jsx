@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { authApi } from '../../api/auth';
+import { useI18n } from '../../i18n/LanguageProvider';
 
 export default function AuthPage({ onAuthenticated }) {
+  const { t } = useI18n();
   const [mode, setMode] = useState('login');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -34,25 +36,25 @@ export default function AuthPage({ onAuthenticated }) {
 
   return (
     <section className="auth-card" aria-labelledby="auth-title">
-      <div className="tabs" aria-label="账号操作">
-        <button type="button" className={mode === 'login' ? 'active' : ''} aria-pressed={mode === 'login'} disabled={busy} onClick={() => switchMode('login')}>登录</button>
-        <button type="button" className={mode === 'register' ? 'active' : ''} aria-pressed={mode === 'register'} disabled={busy} onClick={() => switchMode('register')}>创建账号</button>
+      <div className="tabs" aria-label={t('auth.tabsLabel')}>
+        <button type="button" className={mode === 'login' ? 'active' : ''} aria-pressed={mode === 'login'} disabled={busy} onClick={() => switchMode('login')}>{t('auth.login')}</button>
+        <button type="button" className={mode === 'register' ? 'active' : ''} aria-pressed={mode === 'register'} disabled={busy} onClick={() => switchMode('register')}>{t('auth.register')}</button>
       </div>
-      <h2 id="auth-title">{mode === 'login' ? '欢迎回来' : '开启新的机会'}</h2>
-      <p className="muted">{mode === 'login' ? '登录后进入你的工作台。' : '选择你的身份，建立专属账号。'}</p>
+      <h2 id="auth-title">{mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle')}</h2>
+      <p className="muted">{mode === 'login' ? t('auth.loginSubtitle') : t('auth.registerSubtitle')}</p>
       <form onSubmit={submit} key={mode}>
-        <label>用户名<input name="username" autoComplete="username" minLength={3} maxLength={150} required disabled={busy} />{field('username')}</label>
+        <label>{t('auth.username')}<input name="username" autoComplete="username" minLength={3} maxLength={150} required disabled={busy} />{field('username')}</label>
         {mode === 'register' && <>
-          <label>显示名称<input name="display_name" autoComplete="nickname" maxLength={100} disabled={busy} />{field('display_name')}</label>
-          <label>邮箱<input name="email" type="email" autoComplete="email" maxLength={254} required disabled={busy} />{field('email')}</label>
-          <label>身份<select name="role" aria-label="身份" defaultValue="Candidate" disabled={busy}><option value="Candidate">求职者 Candidate</option><option value="Employer">雇主 Employer</option></select>{field('role')}</label>
+          <label>{t('auth.displayName')}<input name="display_name" autoComplete="nickname" maxLength={100} disabled={busy} />{field('display_name')}</label>
+          <label>{t('auth.email')}<input name="email" type="email" autoComplete="email" maxLength={254} required disabled={busy} />{field('email')}</label>
+          <label>{t('auth.role')}<select name="role" aria-label={t('auth.role')} defaultValue="Candidate" disabled={busy}><option value="Candidate">{t('auth.roleCandidate')}</option><option value="Employer">{t('auth.roleEmployer')}</option></select>{field('role')}</label>
         </>}
-        <label>密码<input name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'register' ? 8 : undefined} maxLength={128} required disabled={busy} />{field('password')}</label>
-        {mode === 'register' && <p className="hint">至少 8 位，避免常见密码、纯数字和与账号相似的内容。</p>}
+        <label>{t('auth.password')}<input name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'register' ? 8 : undefined} maxLength={128} required disabled={busy} />{field('password')}</label>
+        {mode === 'register' && <p className="hint">{t('auth.passwordHint')}</p>}
         {error && <div className="error" role="alert">{error}{field('non_field_errors')}</div>}
-        <button className="primary" type="submit" disabled={busy}>{busy ? '正在处理…' : mode === 'login' ? '登录账号' : '创建账号并登录'}</button>
+        <button className="primary" type="submit" disabled={busy}>{busy ? t('auth.busy') : mode === 'login' ? t('auth.submitLogin') : t('auth.submitRegister')}</button>
       </form>
-      <p className="hint footer-hint">本地演示账号与启动方式见仓库 README。</p>
+      <p className="hint footer-hint">{t('auth.footerHint')}</p>
     </section>
   );
 }

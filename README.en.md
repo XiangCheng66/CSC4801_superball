@@ -102,3 +102,5 @@ Python tests are in [tests/unit](tests/unit/) and use `file::test` notation. Fro
 ## Known limitations
 
 Resumes are plain text. Optional PDF extraction and AI match explanations are not implemented.
+
+The interface switches between Chinese and English from the header (default Chinese, kept in `localStorage` under `superball.lang`). Product names, role values, application status values, job titles, company names, and skills are not translated; network-level fallback errors such as an unreachable server are still raised in Chinese by the frontend request module.

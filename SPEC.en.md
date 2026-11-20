@@ -70,6 +70,7 @@ Successful responses contain `{"data": ...}`. Errors contain an `error` object w
 - **Account entry** offers registration and sign-in. The account screen can refresh identity, verify the role, and sign out. Page reload restores the session through `/api/auth/me/`.
 - **Candidate workspace** includes profile, private resume, ranked jobs, application history, and interview booking. The application service locks the job in a transaction. A lookup and uniqueness constraint prevent duplicate submissions, which return `409`. The candidate sees each job, employer, status, and existing booking. The employer controls status changes.
 - **Employer workspace** includes company details, job management, applicant lists, interview slots, and received bookings. Applicant rows show identity, skills, match score, status, and booking. Only the job owner can change status.
+- **Interface language** switches between Chinese and English from a header button. The choice is stored in `localStorage` under `superball.lang`, defaults to Chinese, and survives a reload. Copy lives in `frontend/src/i18n/messages.js`; `useI18n()` exposes `t()`, `statusLabel()`, and `statusName()`, and falls back to Chinese when no provider is mounted so components stay independently testable. Product names, the Candidate/Employer role values, application status values, job titles, company names, and skills are data or contract values and are not translated.
 
 ## Skill storage, matching, and ranking
 

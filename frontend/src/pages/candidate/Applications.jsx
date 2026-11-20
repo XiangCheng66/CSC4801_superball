@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { applicationApi } from '../../api/applications';
+import { useI18n } from '../../i18n/LanguageProvider';
 import { formatTime } from '../scheduling/time';
 
-const STATUS_LABELS = {
-  Pending: '待处理', Interviewing: '面试中', Rejected: '已拒绝', Accepted: '已录用',
-};
-
 export function ApplicationStatus({ status }) {
-  return <span className="application-status">{status} · {STATUS_LABELS[status] || status}</span>;
+  const { statusLabel } = useI18n();
+  return <span className="application-status">{statusLabel(status)}</span>;
 }
 
 export function ApplyButton({ jobId, onApplied, onConflict, onLoggedOut }) {
+  const { t } = useI18n();
   const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +24,7 @@ export function ApplyButton({ jobId, onApplied, onConflict, onLoggedOut }) {
     } catch (failure) {
       if (failure.status === 401) onLoggedOut();
       else if (failure.code === 'application_conflict') onConflict();
-      else if (failure.status === 404) setError('该岗位已不存在，请刷新岗位列表。');
+      else if (failure.status === 404) setError(t('candidate.jobGone'));
       else setError([failure.message, ...Object.values(failure.fields || {}).flat()].join(' '));
     } finally {
       inFlight.current = false;
@@ -35,11 +34,12 @@ export function ApplyButton({ jobId, onApplied, onConflict, onLoggedOut }) {
 
   return <div className="application-action">
     {error && <p className="error" role="alert">{error}</p>}
-    <button className="primary" onClick={apply} disabled={busy}>{busy ? '正在投递…' : '投递岗位'}</button>
+    <button className="primary" onClick={apply} disabled={busy}>{busy ? t('candidate.applying') : t('candidate.apply')}</button>
   </div>;
 }
 
 export default function Applications({ onLoggedOut, onBrowseJobs }) {
+  const { t } = useI18n();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -61,28 +61,28 @@ export default function Applications({ onLoggedOut, onBrowseJobs }) {
 
   return <section aria-labelledby="applications-title">
     <div className="application-header">
-      <h2 id="applications-title">我的申请</h2>
-      <button className="secondary" disabled={loading} onClick={() => setAttempt((value) => value + 1)}>刷新申请</button>
+      <h2 id="applications-title">{t('candidate.applicationsTitle')}</h2>
+      <button className="secondary" disabled={loading} onClick={() => setAttempt((value) => value + 1)}>{t('candidate.refreshApplications')}</button>
     </div>
-    <p className="muted">查看你投递的岗位、当前状态及已有面试预约。状态由岗位所属雇主维护。</p>
-    {loading ? <p role="status">正在加载申请…</p> : error ? <div>
+    <p className="muted">{t('candidate.applicationsSubtitle')}</p>
+    {loading ? <p role="status">{t('candidate.loadingApplications')}</p> : error ? <div>
       <p className="error" role="alert">{error}</p>
-      <button className="secondary" onClick={() => setAttempt((value) => value + 1)}>重新加载申请</button>
+      <button className="secondary" onClick={() => setAttempt((value) => value + 1)}>{t('candidate.reloadApplications')}</button>
     </div> : rows.length === 0 ? <div className="empty-state">
-      <p>你还没有投递岗位。</p>
-      <button className="secondary" onClick={onBrowseJobs}>浏览岗位</button>
+      <p>{t('candidate.noApplications')}</p>
+      <button className="secondary" onClick={onBrowseJobs}>{t('candidate.browseJobs')}</button>
     </div> : <div className="job-list">{rows.map((row) => <article className="job-card application-card" key={row.id}>
       <div className="job-heading"><h3>{row.job.title}</h3><ApplicationStatus status={row.status} /></div>
       <p className="job-company">{row.job.company}</p>
-      <p className="hint">申请编号 #{row.id}</p>
-      <details><summary>查看岗位描述</summary><p className="job-description">{row.job.description}</p></details>
+      <p className="hint">{t('candidate.applicationNumber', { id: row.id })}</p>
+      <details><summary>{t('candidate.viewDescription')}</summary><p className="job-description">{row.job.description}</p></details>
       <div className="application-booking">
-        <h4>面试预约</h4>
+        <h4>{t('candidate.bookingTitle')}</h4>
         {row.booking ? <>
-          <p>预约编号 #{row.booking.id} · 时段 #{row.booking.slot_id}</p>
+          <p>{t('candidate.bookingNumber', { id: row.booking.id })} · {t('candidate.slotNumber', { id: row.booking.slot_id })}</p>
           <p>{formatTime(row.booking.start_at)} ～ {formatTime(row.booking.end_at)}</p>
-          <p className="hint">北京时间（UTC+8）</p>
-        </> : <p>尚无面试预约。</p>}
+          <p className="hint">{t('candidate.beijingTime')}</p>
+        </> : <p>{t('candidate.noBooking')}</p>}
       </div>
     </article>)}</div>}
   </section>;
