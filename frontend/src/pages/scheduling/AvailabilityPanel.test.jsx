@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { renderInChinese as render } from '../../test-utils';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { ApiError } from '../../api/client';
 import { availabilityApi } from '../../api/scheduling';

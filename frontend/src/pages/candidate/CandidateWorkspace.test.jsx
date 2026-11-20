@@ -1,3 +1,4 @@
+import { LANGUAGE_STORAGE_KEY } from '../../i18n/languagePreference';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import App from '../../App';
@@ -22,6 +23,7 @@ const user = { id: 1, username: 'alice', email: 'alice@example.test', display_na
 const job = { id: 7, title: 'Backend', company: 'Demo Company', description: 'Build services', required_skills: ['Python', 'SQL'], match_score: 50 };
 
 beforeEach(() => {
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, 'zh');
   vi.resetAllMocks();
   employerApi.getCompany.mockRejectedValue(new ApiError('Not found', { status: 404 }));
   employerApi.listJobs.mockResolvedValue([]);

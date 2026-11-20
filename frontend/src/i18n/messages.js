@@ -5,6 +5,7 @@
 // a missing translation is easy to spot and machine-checkable in tests.
 export const messages = {
   zh: {
+    'app.title': 'Superball · 招聘与求职',
     'app.brandHome': 'Superball 首页',
     'app.courseLabel': 'CSC4801 · 招聘与求职',
     'app.introTitleLine1': '让每一份技能，',
@@ -21,6 +22,13 @@ export const messages = {
     'app.footerRight': '以技能为起点，以机会为方向。',
     'app.languageToggle': '切换到英文',
     'app.languageShort': 'EN',
+
+    'api.offline': '无法连接服务，请检查服务是否已启动。',
+    'api.invalidResponse': '服务返回了无法识别的响应。',
+    'api.requestFailed': '请求失败，请重试。',
+    'api.missingData': '服务响应缺少 data 字段。',
+    'api.invalidPath': 'API 请求必须使用同源 /api/ 路径。',
+    'api.missingCsrf': '无法获取 CSRF 校验信息。',
 
     'auth.tabsLabel': '账号操作',
     'auth.login': '登录',
@@ -229,6 +237,7 @@ export const messages = {
   },
 
   en: {
+    'app.title': 'Superball · Recruiting & Matching',
     'app.brandHome': 'Superball home',
     'app.courseLabel': 'CSC4801 · Recruiting & Matching',
     'app.introTitleLine1': 'Every skill deserves',
@@ -245,6 +254,13 @@ export const messages = {
     'app.footerRight': 'Start with a skill, aim for an opportunity.',
     'app.languageToggle': 'Switch to Chinese',
     'app.languageShort': '中文',
+
+    'api.offline': 'Could not connect. Check that the server is running.',
+    'api.invalidResponse': 'The server returned an invalid response.',
+    'api.requestFailed': 'The request failed. Please try again.',
+    'api.missingData': 'The response is missing its data field.',
+    'api.invalidPath': 'API requests must use a same-origin /api/ path.',
+    'api.missingCsrf': 'Could not get the CSRF token.',
 
     'auth.tabsLabel': 'Account actions',
     'auth.login': 'Login',
@@ -453,4 +469,4 @@ export const messages = {
 };
 
 export const LANGUAGES = ['zh', 'en'];
-export const DEFAULT_LANGUAGE = 'zh';
+export const DEFAULT_LANGUAGE = 'en';

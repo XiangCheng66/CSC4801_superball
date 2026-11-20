@@ -1,3 +1,4 @@
+import { LANGUAGE_STORAGE_KEY } from './i18n/languagePreference';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import App from './App';
@@ -16,6 +17,7 @@ vi.mock('./api/bookings', () => ({ bookingApi: { list: vi.fn() } }));
 const user = { id: 1, username: 'alice', email: 'alice@example.test', display_name: 'Alice', role: 'Candidate' };
 
 beforeEach(() => {
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, 'zh');
   vi.resetAllMocks();
   bookingApi.list.mockResolvedValue([]);
   employerApi.getCompany.mockRejectedValue(new ApiError('Not found', { status: 404 }));

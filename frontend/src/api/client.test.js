@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, createApiClient } from './client';
+import { LANGUAGE_STORAGE_KEY } from '../i18n/languagePreference';
 
 const response = (data, status = 200) => ({ ok: status < 400, status, json: async () => data });
 
@@ -51,7 +52,9 @@ describe('shared API contract', () => {
 
   it('reports network and invalid response errors and preserves aborts', async () => {
     const network = createApiClient({ fetchImpl: vi.fn().mockRejectedValue(new TypeError('offline')) });
-    await expect(network('/api/auth/me/')).rejects.toBeInstanceOf(ApiError);
+    await expect(network('/api/auth/me/')).rejects.toMatchObject({
+      code: 'network_error', message: 'Could not connect. Check that the server is running.',
+    });
     const invalid = createApiClient({ fetchImpl: vi.fn().mockResolvedValue({ status: 502, json: async () => { throw new Error(); } }) });
     await expect(invalid('/api/auth/me/')).rejects.toMatchObject({ status: 502, code: 'invalid_response' });
     const empty = createApiClient({ fetchImpl: vi.fn().mockResolvedValue(response(null)) });
@@ -59,6 +62,18 @@ describe('shared API contract', () => {
     const aborted = new DOMException('Aborted', 'AbortError');
     const cancelled = createApiClient({ fetchImpl: vi.fn().mockRejectedValue(aborted) });
     await expect(cancelled('/api/auth/me/')).rejects.toBe(aborted);
+  });
+
+  it('uses the current language for request fallback errors', async () => {
+    const request = createApiClient({ fetchImpl: vi.fn().mockRejectedValue(new TypeError('offline')) });
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, 'zh');
+    try {
+      const error = await request('/api/auth/me/').catch((failure) => failure);
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.message).toBe('无法连接服务，请检查服务是否已启动。');
+    } finally {
+      localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+    }
   });
 
   it('stops before mutation if CSRF initialization returns no token', async () => {

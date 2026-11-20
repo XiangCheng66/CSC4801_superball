@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { renderInChinese as render } from '../../test-utils';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import EmployerWorkspace, { splitSkills } from './EmployerWorkspace';
 import { employerApi } from '../../api/employer';

@@ -1,17 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { DEFAULT_LANGUAGE, LANGUAGES, messages } from './messages';
+import { DEFAULT_LANGUAGE, messages } from './messages';
+import { LANGUAGE_STORAGE_KEY, readStoredLanguage } from './languagePreference';
 
-const STORAGE_KEY = 'superball.lang';
 const LanguageContext = createContext(null);
-
-function readStoredLanguage() {
-  try {
-    const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
-    return LANGUAGES.includes(stored) ? stored : DEFAULT_LANGUAGE;
-  } catch {
-    return DEFAULT_LANGUAGE; // Storage blocked; fall back without failing the page.
-  }
-}
 
 export function format(template, params) {
   if (!params) return template;
@@ -24,8 +15,9 @@ export function LanguageProvider({ children, initialLanguage }) {
   const [language, setLanguage] = useState(() => initialLanguage || readStoredLanguage());
 
   useEffect(() => {
-    try { globalThis.localStorage?.setItem(STORAGE_KEY, language); } catch { /* ignore */ }
-    if (typeof document !== 'undefined') document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+    try { globalThis.localStorage?.setItem(LANGUAGE_STORAGE_KEY, language); } catch { /* ignore */ }
+    document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+    document.title = (messages[language] || messages[DEFAULT_LANGUAGE])['app.title'];
   }, [language]);
 
   const t = useCallback((key, params) => {
@@ -60,8 +52,8 @@ const FALLBACK = {
   setLanguage: () => {},
   toggleLanguage: () => {},
   t: (key, params) => format(messages[DEFAULT_LANGUAGE][key] ?? key, params),
-  statusLabel: (status) => `${status} · ${messages[DEFAULT_LANGUAGE][`status.${status}`] || status}`,
-  statusName: (status) => messages[DEFAULT_LANGUAGE][`status.${status}`] || status,
+  statusLabel: (status) => status,
+  statusName: (status) => status,
 };
 
 export function useI18n() {
