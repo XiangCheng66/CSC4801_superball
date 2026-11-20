@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+// Each browser context sets its language when it opens the app.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 // Run against an isolated database freshly populated by seed_demo.
 test('candidate books, stale competitor sees conflict, employer sees booking, mobile is usable', async ({ browser }) => {
   const first = await browser.newContext({ timezoneId: 'America/Los_Angeles' });
@@ -8,6 +11,7 @@ test('candidate books, stale competitor sees conflict, employer sees booking, mo
   const base = process.env.APP_URL || 'http://127.0.0.1:5173';
   async function login(context, username) {
     const page = await context.newPage();
+    await page.addInitScript(() => localStorage.setItem('superball.language', 'zh'));
     await page.goto(base);
     await page.getByLabel('用户名', { exact: true }).fill(username);
     await page.getByLabel('密码', { exact: true }).fill('LocalDemo!2026');
